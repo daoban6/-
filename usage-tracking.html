@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>辅料使用量及领用记录管理</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        success: '#22c55e',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        info: '#0ea5e9',
+                        light: '#f8fafc',
+                        dark: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        card: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300;
+            }
+            .btn-secondary {
+                @apply bg-secondary text-white px-4 py-2 rounded-lg hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-opacity-50 transition-all duration-300;
+            }
+            .btn-success {
+                @apply bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-all duration-300;
+            }
+            .btn-danger {
+                @apply bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-all duration-300;
+            }
+            .input-field {
+                @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+            }
+            .table-header {
+                @apply px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+            }
+            .table-cell {
+                @apply px-4 py-3 whitespace-nowrap text-sm text-gray-800;
+            }
+            .badge {
+                @apply px-2 py-1 text-xs font-medium rounded-full;
+            }
+            .badge-success {
+                @apply bg-green-100 text-green-800;
+            }
+            .badge-warning {
+                @apply bg-yellow-100 text-yellow-800;
+            }
+            .badge-danger {
+                @apply bg-red-100 text-red-800;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold text-gray-800">辅料管理系统</h1>
+                <span class="text-gray-500">|</span>
+                <h2 class="text-xl font-semibold text-gray-700">使用量及领用记录管理</h2>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="backToMainBtn" class="btn-secondary flex items-center">
+                    <i class="fa fa-arrow-left mr-2"></i>返回主页面
+                </button>
+                <div class="relative">
+                    <button id="userMenuBtn" class="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        <i class="fa fa-user-circle text-lg"></i>
+                        <span id="currentUser">未登录</span>
+                        <i class="fa fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="userMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 hidden">
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100" id="loginBtn">
+                            <i class="fa fa-sign-in mr-2"></i>登录
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100" id="logoutBtn" style="display: none;">
+                            <i class="fa fa-sign-out mr-2"></i>退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        <!-- 统计卡片区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <!-- 今日领用 -->
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover cursor-pointer" onclick="filterUsageByPeriod('today')">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">今日领用</p>
+                        <p class="text-2xl font-bold text-gray-800" id="todayUsageCount">0</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fa fa-calendar-check-o text-blue-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 本周领用 -->
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500 card-hover cursor-pointer" onclick="filterUsageByPeriod('week')">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">本周领用</p>
+                        <p class="text-2xl font-bold text-gray-800" id="weekUsageCount">0</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fa fa-calendar text-green-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 本月领用 -->
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-orange-500 card-hover cursor-pointer" onclick="filterUsageByPeriod('month')">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">本月领用</p>
+                        <p class="text-2xl font-bold text-gray-800" id="monthUsageCount">0</p>
+                    </div>
+                    <div class="bg-orange-100 p-3 rounded-full">
+                        <i class="fa fa-calendar-plus-o text-orange-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 总领用次数 -->
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-purple-500 card-hover cursor-pointer" onclick="filterUsageByPeriod('all')">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">总领用次数</p>
+                        <p class="text-2xl font-bold text-gray-800" id="totalUsageCount">0</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fa fa-bar-chart text-purple-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能按钮区域 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-wrap gap-4">
+            <button id="addRecordBtn" class="btn-primary flex items-center">
+                <i class="fa fa-plus mr-2"></i>新增领退料记录
+            </button>
+            <button id="exportUsageBtn" class="btn-secondary flex items-center">
+                <i class="fa fa-download mr-2"></i>导出领用记录
+            </button>
+            <button id="usageStatsBtn" class="btn-info flex items-center">
+                <i class="fa fa-pie-chart mr-2"></i>使用量统计分析
+            </button>
+        </div>
+
+        <!-- 搜索筛选区域 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <!-- 项目合同号搜索 -->
+                <div class="relative">
+                    <input type="text" id="contractSearch" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pl-10" placeholder="项目合同号">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-file-text-o text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 项目名称搜索 -->
+                <div class="relative">
+                    <input type="text" id="projectSearch" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pl-10" placeholder="项目名称">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-building-o text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 物料名称搜索 -->
+                <div class="relative">
+                    <input type="text" id="materialSearch" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pl-10" placeholder="物料名称">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-tag text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 日期范围选择 -->
+                <div class="relative">
+                    <input type="date" id="dateRangeStart" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pl-10">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-calendar-o text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 搜索按钮 -->
+                <div class="flex gap-2">
+                    <button id="searchUsageBtn" class="btn-primary flex-1 flex items-center justify-center">
+                        <i class="fa fa-search mr-2"></i>搜索
+                    </button>
+                    <button id="resetUsageBtn" class="btn-secondary px-4">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="hidden py-8 flex justify-center items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <span class="ml-3 text-gray-600">加载中...</span>
+        </div>
+
+        <!-- 空数据状态 -->
+        <div id="emptyData" class="hidden py-12 flex flex-col items-center justify-center">
+            <div class="bg-gray-100 rounded-full p-6 mb-4">
+                <i class="fa fa-clipboard text-gray-400 text-4xl"></i>
+            </div>
+            <p class="text-gray-500 text-lg">暂无领用记录</p>
+            <p class="text-gray-400 text-sm mt-2">点击"新增领用记录"按钮添加第一条记录</p>
+        </div>
+
+        <!-- 领用记录表格 -->
+        <div id="usageTableContainer" class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th scope="col" class="table-header">记录类型</th>
+                            <th scope="col" class="table-header">项目合同号</th>
+                            <th scope="col" class="table-header">项目名称</th>
+                            <th scope="col" class="table-header">物料编码</th>
+                            <th scope="col" class="table-header">物料名称</th>
+                            <th scope="col" class="table-header">物料规格</th>
+                            <th scope="col" class="table-header">数量</th>
+                            <th scope="col" class="table-header">单位</th>
+                            <th scope="col" class="table-header">领退料人</th>
+                            <th scope="col" class="table-header">日期</th>
+                            <th scope="col" class="table-header">备注</th>
+                            <th scope="col" class="table-header">登录用户</th>
+                            <th scope="col" class="table-header text-right">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usageTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- 表格数据将通过JavaScript动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页控件 -->
+            <div id="pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <button id="prevPageMobile" class="btn-secondary">上一页</button>
+                    <button id="nextPageMobile" class="btn-secondary">下一页</button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            显示 <span id="startRange">1</span> 到 <span id="endRange">10</span> 条，共 <span id="totalDataCount">0</span> 条记录
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            <button id="prevPage" class="btn-secondary rounded-r-none">上一页</button>
+                            <button id="nextPage" class="btn-secondary rounded-l-none">下一页</button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-4">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>© 2026 辅料管理系统 - 使用量及领用记录管理</p>
+            <p class="mt-1">最后更新时间：<span id="lastUpdateTime">2026-04-09 08:30:00</span></p>
+        </div>
+    </footer>
+
+    <!-- 新增/编辑领用记录弹窗 -->
+    <div id="usageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 id="usageModalTitle" class="text-lg font-semibold text-gray-800">新增领用记录</h3>
+                <button id="closeUsageModal" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <form id="usageForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 第一行：记录类型、合同号、项目名称 -->
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <!-- 记录类型 -->
+                            <div>
+                                <label for="recordType" class="block text-xs font-medium text-gray-700 mb-1">记录类型 <span class="text-red-500">*</span></label>
+                                <select id="recordType" name="recordType" class="input-field text-xs w-full" required>
+                                    <option value="usage">领料</option>
+                                    <option value="return">退料</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 项目合同号 -->
+                            <div>
+                                <label for="contractNumber" class="block text-xs font-medium text-gray-700 mb-1">项目合同号 <span class="text-red-500">*</span></label>
+                                <input type="text" id="contractNumber" name="contractNumber" class="input-field text-xs w-full" placeholder="合同号" required>
+                            </div>
+                            
+                            <!-- 项目名称 -->
+                            <div>
+                                <label for="projectName" class="block text-xs font-medium text-gray-700 mb-1">项目名称 <span class="text-red-500">*</span></label>
+                                <input type="text" id="projectName" name="projectName" class="input-field text-xs w-full" placeholder="项目名称" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 第二行：领用人、领用日期 -->
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <!-- 领退料人 -->
+                            <div>
+                                <label for="userName" class="block text-xs font-medium text-gray-700 mb-1" id="userLabel">领用人 <span class="text-red-500">*</span></label>
+                                <input type="text" id="userName" name="userName" class="input-field text-xs" placeholder="姓名" required>
+                            </div>
+                            
+                            <!-- 日期 -->
+                            <div>
+                                <label for="usageDate" class="block text-xs font-medium text-gray-700 mb-1" id="dateLabel">领用日期 <span class="text-red-500">*</span></label>
+                                <input type="date" id="usageDate" name="date" class="input-field text-xs" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 物料选择和列表 -->
+                        <div class="md:col-span-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-medium text-gray-700">物料清单 <span class="text-red-500">*</span></label>
+                            </div>
+                            
+                            <!-- 物料搜索 -->
+                            <div class="relative mb-2">
+                                <input type="text" id="materialSearchInput" class="input-field pl-10 text-xs" placeholder="输入物料名称、规格或编码搜索...">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa fa-search text-gray-400"></i>
+                                </div>
+                                <div id="materialDropdown" class="absolute left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50 hidden" style="z-index: 1000;">
+                                    <!-- 搜索结果将在这里显示 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 物料列表 -->
+                            <div id="materialList" class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 border-b border-gray-200 px-3 py-1 grid grid-cols-5 gap-1 text-xs font-medium text-gray-500">
+                                    <div>物料名称</div>
+                                    <div>规格</div>
+                                    <div>单位</div>
+                                    <div>数量</div>
+                                    <div class="text-right">操作</div>
+                                </div>
+                                <div id="materialItems" class="max-h-96 overflow-y-auto">
+                                    <!-- 物料项将在这里动态添加 -->
+                                </div>
+                                <div id="emptyMaterialList" class="py-4 text-center text-gray-500 text-xs">
+                                    <i class="fa fa-clipboard text-lg mb-1"></i>
+                                    <p>请添加物料</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 备注 -->
+                        <div class="md:col-span-2 text-xs">
+                            <label for="usageRemark" class="block text-xs font-medium text-gray-700 mb-1">备注</label>
+                            <textarea id="usageRemark" name="remark" rows="2" class="input-field text-xs" placeholder="请输入备注信息（可选）"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelUsageBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    取消
+                </button>
+                <button id="confirmUsageBtn" class="btn-primary">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计分析弹窗 -->
+    <div id="statsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">使用量统计分析</h3>
+                <button id="closeStatsModal" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 物料使用量排行 -->
+                    <div>
+                        <h4 class="text-md font-semibold text-gray-700 mb-4">物料使用量TOP10</h4>
+                        <div class="bg-white rounded-lg p-4 h-80">
+                            <canvas id="materialUsageChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 月度使用趋势 -->
+                    <div>
+                        <h4 class="text-md font-semibold text-gray-700 mb-4">月度使用趋势</h4>
+                        <div class="bg-white rounded-lg p-4 h-80">
+                            <canvas id="monthlyTrendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 季度使用趋势 -->
+                    <div>
+                        <h4 class="text-md font-semibold text-gray-700 mb-4">季度使用趋势</h4>
+                        <div class="bg-white rounded-lg p-4 h-80">
+                            <canvas id="quarterlyTrendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 项目使用统计 -->
+                    <div>
+                        <h4 class="text-md font-semibold text-gray-700 mb-4">项目使用统计</h4>
+                        <div class="bg-white rounded-lg p-4 h-80">
+                            <canvas id="projectUsageChart"></canvas>
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                <button id="exportStatsBtn" class="btn-secondary flex items-center">
+                    <i class="fa fa-download mr-2"></i>导出统计报告
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast" class="fixed top-4 right-4 transform translate-x-full transition-transform duration-300 z-50">
+        <div class="bg-white rounded-lg shadow-lg border-l-4 border-blue-500 p-4 flex items-center space-x-3 max-w-sm">
+            <div id="toastIcon" class="text-blue-500">
+                <i class="fa fa-info-circle text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <p id="toastTitle" class="text-sm font-medium text-gray-800">提示</p>
+                <p id="toastMessage" class="text-sm text-gray-600">操作成功</p>
+            </div>
+            <button id="closeToast" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 登录模态框 -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">请登录以修改数据</h3>
+            </div>
+            <div class="px-6 py-4">
+                <form id="loginForm">
+                    <div class="space-y-4">
+                        <!-- 用户名 -->
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="username" name="username" class="input-field" placeholder="请输入用户名" required>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
+                            <input type="password" id="password" name="password" class="input-field" placeholder="请输入密码" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelLoginBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    取消
+                </button>
+                <button id="loginBtnModal" class="btn-primary">
+                    登录
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import API from './api-config.js';
+        
+        // 全局变量
+        let materialData = []; // 物料数据
+        let usageData = []; // 领用记录数据
+        let filteredUsageData = []; // 筛选后的领用记录
+        let currentPage = 1; // 当前页码
+        const itemsPerPage = 10; // 每页显示的记录数
+        let editingUsageId = null; // 当前编辑的领用记录ID
+        let isLoggedIn = false; // 登录状态
+        let currentUser = null; // 当前登录用户
+        let selectedMaterials = []; // 选中的物料列表
+        
+        // DOM元素
+        const usageTableBody = document.getElementById('usageTableBody');
+        const loading = document.getElementById('loading');
+        const usageTableContainer = document.getElementById('usageTableContainer');
+        const emptyData = document.getElementById('emptyData');
+        const prevPageBtn = document.getElementById('prevPage');
+        const nextPageBtn = document.getElementById('nextPage');
+        const prevPageMobileBtn = document.getElementById('prevPageMobile');
+        const nextPageMobileBtn = document.getElementById('nextPageMobile');
+        const startRange = document.getElementById('startRange');
+        const endRange = document.getElementById('endRange');
+        const totalDataCount = document.getElementById('totalDataCount');
+        const lastUpdateTime = document.getElementById('lastUpdateTime');
+        
+        // 统计元素
+        const todayUsageCount = document.getElementById('todayUsageCount');
+        const weekUsageCount = document.getElementById('weekUsageCount');
+        const monthUsageCount = document.getElementById('monthUsageCount');
+        const totalUsageCount = document.getElementById('totalUsageCount');
+        
+        // 搜索元素
+        const contractSearch = document.getElementById('contractSearch');
+        const projectSearch = document.getElementById('projectSearch');
+        const materialSearch = document.getElementById('materialSearch');
+        const dateRangeStart = document.getElementById('dateRangeStart');
+        const searchUsageBtn = document.getElementById('searchUsageBtn');
+        const resetUsageBtn = document.getElementById('resetUsageBtn');
+        
+        // 弹窗元素
+        const usageModal = document.getElementById('usageModal');
+        const usageModalTitle = document.getElementById('usageModalTitle');
+        const usageForm = document.getElementById('usageForm');
+        const materialSelect = document.getElementById('materialSelect');
+        const materialSearchInput = document.getElementById('materialSearchInput');
+        const materialDropdown = document.getElementById('materialDropdown');
+        const selectedMaterialInfo = document.getElementById('selectedMaterialInfo');
+        const selectedMaterialText = document.getElementById('selectedMaterialText');
+        const contractNumber = document.getElementById('contractNumber');
+        const projectName = document.getElementById('projectName');
+        const usageQuantity = document.getElementById('usageQuantity');
+        const userName = document.getElementById('userName');
+        const usageDate = document.getElementById('usageDate');
+        const usageRemark = document.getElementById('usageRemark');
+        const closeUsageModal = document.getElementById('closeUsageModal');
+        const cancelUsageBtn = document.getElementById('cancelUsageBtn');
+        const confirmUsageBtn = document.getElementById('confirmUsageBtn');
+        
+        // 统计弹窗元素
+        const statsModal = document.getElementById('statsModal');
+        const closeStatsModal = document.getElementById('closeStatsModal');
+        const exportStatsBtn = document.getElementById('exportStatsBtn');
+        
+        // Toast元素
+        const toast = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        const closeToast = document.getElementById('closeToast');
+        
+        // 图表实例
+        let materialUsageChart = null;
+        let monthlyTrendChart = null;
+        let quarterlyTrendChart = null;
+        let projectUsageChart = null;
+
+        // 初始化函数
+        async function init() {
+            // 设置默认日期为今天
+            const today = new Date();
+            const formattedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            usageDate.value = formattedDate;
+            
+            // 检查登录状态
+            isLoggedIn = API.isLoggedIn();
+            currentUser = API.getCurrentUser();
+            
+            // 加载数据
+            await loadMaterialData();
+            await loadUsageData();
+            
+            // 更新统计信息
+            updateStatistics();
+            
+            // 更新表格
+            updateUsageTable();
+            
+            // 更新最后更新时间
+            updateLastUpdateTime();
+            
+            // 更新登录状态UI
+            updateLoginStatusUI();
+            
+            // 绑定事件
+            bindEvents();
+            
+            // 初始化图表
+            setTimeout(() => {
+                initCharts();
+            }, 100);
+            
+            // 定时刷新数据（每30秒）
+            setInterval(async () => {
+                if (isLoggedIn) {
+                    await loadMaterialData();
+                    await loadUsageData();
+                    updateStatistics();
+                    updateUsageTable();
+                    updateLastUpdateTime();
+                }
+            }, 30000);
+        }
+
+        // 检查用户权限
+        function checkPermission(permission) {
+            if (!isLoggedIn || !currentUser) {
+                return permission === 'view' || permission === 'export_excel';
+            }
+            
+            const permissions = {
+                'user': ['view', 'export_excel', 'export_usage', 'export_returns', 'export_stats'],
+                'admin': ['view', 'export_excel', 'export_usage', 'export_returns', 'export_stats', 'edit_inventory', 'delete_inventory', 'import_excel', 'add_material', 'add_usage', 'add_return'],
+                'super_admin': ['view', 'export_excel', 'export_usage', 'export_returns', 'export_stats', 'edit_inventory', 'delete_inventory', 'import_excel', 'add_material', 'add_usage', 'add_return', 'manage_users']
+            };
+            
+            const userPermissions = permissions[currentUser.role] || [];
+            return userPermissions.includes(permission);
+        }
+
+        // 从API加载物料数据
+        async function loadMaterialData() {
+            try {
+                const params = {
+                    page: 1,
+                    limit: 1000
+                };
+                const result = await API.Material.getAll(params);
+                materialData = result.data || [];
+                console.log('Loaded material data from API:', materialData);
+            } catch (error) {
+                console.error('加载物料数据失败:', error);
+                if (error.message.includes('token') || error.message.includes('登录')) {
+                    logout();
+                }
+            }
+        }
+
+
+
+        // 从API加载领用记录数据
+        async function loadUsageData() {
+            try {
+                const params = {
+                    page: 1,
+                    limit: 1000
+                };
+                const result = await API.Usage.getAll(params);
+                usageData = result.data || [];
+                
+                // 按日期降序排序
+                usageData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // 初始化筛选数据
+                filteredUsageData = [...usageData];
+                console.log('Loaded usage data from API:', usageData);
+            } catch (error) {
+                console.error('加载领用记录失败:', error);
+                if (error.message.includes('token') || error.message.includes('登录')) {
+                    logout();
+                }
+            }
+        }
+
+        // 更新统计信息
+        async function updateStatistics() {
+            try {
+                const stats = await API.Usage.getStats();
+                todayUsageCount.textContent = stats.today || 0;
+                weekUsageCount.textContent = stats.week || 0;
+                monthUsageCount.textContent = stats.month || 0;
+                totalUsageCount.textContent = stats.total || 0;
+            } catch (error) {
+                console.error('获取统计数据失败:', error);
+                // 使用本地数据作为备选
+                const today = new Date().toISOString().split('T')[0];
+                const todayCount = usageData.filter(item => item.date === today).length;
+                
+                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                const weekCount = usageData.filter(item => item.date >= oneWeekAgo).length;
+                
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                const monthStart = oneMonthAgo.toISOString().split('T')[0];
+                const monthCount = usageData.filter(item => item.date >= monthStart).length;
+                
+                todayUsageCount.textContent = todayCount;
+                weekUsageCount.textContent = weekCount;
+                monthUsageCount.textContent = monthCount;
+                totalUsageCount.textContent = usageData.length;
+            }
+        }
+
+        // 更新领用记录表格
+        function updateUsageTable() {
+            // 显示加载状态
+            showLoading();
+            
+            // 模拟加载延迟
+            setTimeout(() => {
+                // 计算分页
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const currentPageData = filteredUsageData.slice(startIndex, endIndex);
+                
+                // 更新表格内容
+                if (currentPageData.length === 0) {
+                    usageTableBody.innerHTML = '';
+                    usageTableContainer.classList.add('hidden');
+                    emptyData.classList.remove('hidden');
+                } else {
+                    usageTableBody.innerHTML = currentPageData.map(item => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="table-cell">
+                                <span class="badge ${item.type === 'usage' ? 'badge-success' : 'badge-danger'}">
+                                    ${item.type === 'usage' ? '领料' : '退料'}
+                                </span>
+                            </td>
+                            <td class="table-cell font-medium">${item.contractNumber}</td>
+                            <td class="table-cell">${item.projectName}</td>
+                            <td class="table-cell">${item.materialCode}</td>
+                            <td class="table-cell">${item.materialName}</td>
+                            <td class="table-cell hidden md:table-cell">${item.materialSpec}</td>
+                            <td class="table-cell font-medium">
+                                <span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-semibold ${item.type === 'usage' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${item.type === 'usage' ? '-' : '+'}${item.quantity}
+                                </span>
+                            </td>
+                            <td class="table-cell">${item.unit}</td>
+                            <td class="table-cell">${item.userName}</td>
+                            <td class="table-cell">${formatDate(item.date)}</td>
+                            <td class="table-cell hidden lg:table-cell">${item.remark || '-'}</td>
+                            <td class="table-cell">${item.loginUser || '-'}</td>
+                            <td class="table-cell text-right">
+                                ${isLoggedIn ? `
+                                <button class="text-red-500 hover:text-red-700 focus:outline-none" onclick="deleteUsageRecord(${item.id})">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `).join('');
+                    
+                    usageTableContainer.classList.remove('hidden');
+                    emptyData.classList.add('hidden');
+                }
+                
+                // 更新分页信息
+                updatePagination();
+                
+                // 隐藏加载状态
+                hideLoading();
+            }, 300);
+        }
+
+        // 更新分页信息
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredUsageData.length / itemsPerPage);
+            const start = filteredUsageData.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, filteredUsageData.length);
+            
+            startRange.textContent = start;
+            endRange.textContent = end;
+            totalDataCount.textContent = filteredUsageData.length;
+            
+            // 更新分页按钮状态
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+            prevPageMobileBtn.disabled = currentPage === 1;
+            nextPageMobileBtn.disabled = currentPage === totalPages || totalPages === 0;
+            
+            if (prevPageBtn.disabled) {
+                prevPageBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                prevPageBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            
+            if (nextPageBtn.disabled) {
+                nextPageBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                nextPageBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // 执行搜索
+        function performSearch() {
+            const contractTerm = contractSearch.value.trim().toLowerCase();
+            const projectTerm = projectSearch.value.trim().toLowerCase();
+            const materialTerm = materialSearch.value.trim().toLowerCase();
+            const dateStart = dateRangeStart.value;
+            
+            // 重置页码
+            currentPage = 1;
+            
+            // 显示加载状态
+            showLoading();
+            
+            // 模拟搜索延迟
+            setTimeout(() => {
+                // 筛选数据
+                filteredUsageData = usageData.filter(item => {
+                    const contractMatch = contractTerm === '' || item.contractNumber.toLowerCase().includes(contractTerm);
+                    const projectMatch = projectTerm === '' || item.projectName.toLowerCase().includes(projectTerm);
+                    const materialMatch = materialTerm === '' || 
+                        item.materialName.toLowerCase().includes(materialTerm) || 
+                        item.materialCode.toLowerCase().includes(materialTerm);
+                    const dateMatch = dateStart === '' || item.date >= dateStart;
+                    
+                    return contractMatch && projectMatch && materialMatch && dateMatch;
+                });
+                
+                // 更新表格
+                updateUsageTable();
+                
+                // 隐藏加载状态
+                hideLoading();
+            }, 300);
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            // 清空搜索框
+            contractSearch.value = '';
+            projectSearch.value = '';
+            materialSearch.value = '';
+            dateRangeStart.value = '';
+            
+            // 重置筛选数据
+            filteredUsageData = [...usageData];
+            
+            // 重置页码
+            currentPage = 1;
+            
+            // 更新表格
+            updateUsageTable();
+        }
+
+        // 打开新增领退料记录弹窗
+        function openAddUsageModal(type = 'usage') {
+            // 设置弹窗标题
+            usageModalTitle.textContent = '新增领退料记录';
+            
+            // 清空表单
+            usageForm.reset();
+            
+            // 设置默认记录类型
+            document.getElementById('recordType').value = type;
+            
+            // 重置物料选择相关元素
+            materialSearchInput.value = '';
+            materialDropdown.classList.add('hidden');
+            
+            // 重置选中的物料列表
+            selectedMaterials = [];
+            updateMaterialList();
+            
+            // 设置默认日期为今天
+            const today = new Date();
+            const formattedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            usageDate.value = formattedDate;
+            
+            // 重置编辑ID
+            editingUsageId = null;
+            
+            // 显示弹窗
+            usageModal.classList.remove('hidden');
+            
+            // 聚焦第一个输入框
+            contractNumber.focus();
+        }
+
+        // 保存领用/退料记录
+        async function saveUsageRecord() {
+            // 检查权限
+            if (!checkPermission('add_usage') && !checkPermission('add_return')) {
+                if (!isLoggedIn) {
+                    openLoginModal();
+                } else {
+                    showToast('权限不足，无法执行此操作', 'error');
+                }
+                return;
+            }
+            
+            // 表单验证
+            if (!usageForm.checkValidity()) {
+                usageForm.reportValidity();
+                return;
+            }
+            
+            // 检查是否有选择物料
+            if (selectedMaterials.length === 0) {
+                showToast('请至少选择一种物料', 'error');
+                return;
+            }
+            
+            // 获取表单数据
+            const recordType = document.getElementById('recordType').value;
+            
+            // 处理每个选中的物料
+            let successCount = 0;
+            for (const item of selectedMaterials) {
+                const material = materialData.find(m => m.id === item.materialId);
+                if (!material) continue;
+                
+                try {
+                    await API.Usage.create({
+                        recordType,
+                        contractNumber: contractNumber.value.trim(),
+                        projectName: projectName.value.trim(),
+                        materialId: material.id,
+                        materialCode: material.code,
+                        materialName: material.name,
+                        materialSpec: material.spec,
+                        materialUnit: material.unit,
+                        quantity: item.quantity,
+                        userName: userName.value.trim(),
+                        date: usageDate.value,
+                        remark: usageRemark.value.trim()
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error('保存领用记录失败:', error);
+                    showToast('保存失败：' + error.message, 'error');
+                }
+            }
+            
+            // 重新加载数据
+            await loadUsageData();
+            await loadMaterialData();
+            
+            // 更新表格
+            updateUsageTable();
+            
+            // 更新统计信息
+            await updateStatistics();
+            
+            // 更新图表
+            updateCharts();
+            
+            // 关闭弹窗
+            closeUsageModalFunc();
+            
+            // 显示成功提示
+            const message = recordType === 'usage' ? `领用记录添加成功，共${successCount}项物料` : `退料记录添加成功，共${successCount}项物料`;
+            showToast(message, 'success');
+        }
+        
+        // 更新物料列表显示
+        function updateMaterialList() {
+            const materialItems = document.getElementById('materialItems');
+            const emptyMaterialList = document.getElementById('emptyMaterialList');
+            
+            if (selectedMaterials.length === 0) {
+                materialItems.innerHTML = '';
+                emptyMaterialList.classList.remove('hidden');
+            } else {
+                emptyMaterialList.classList.add('hidden');
+                materialItems.innerHTML = selectedMaterials.map((item, index) => {
+                    const material = materialData.find(m => m.id === item.materialId);
+                    if (!material) return '';
+                    
+                    return `
+                    <div class="border-b border-gray-200 px-3 py-1.5 grid grid-cols-5 gap-1 items-center text-xs">
+                        <div>${material.name}</div>
+                        <div>${material.spec}</div>
+                        <div>${material.unit}</div>
+                        <div>
+                            <input type="number" class="input-field w-full text-xs h-6" value="${item.quantity}" min="0.01" step="0.01" onchange="updateMaterialQuantity(${index}, this.value)">
+                        </div>
+                        <div class="text-right">
+                            <button type="button" class="text-red-500 hover:text-red-700 text-xs" onclick="removeMaterial(${index})"><i class="fa fa-trash"></i></button>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // 更新物料数量
+        function updateMaterialQuantity(index, value) {
+            const quantity = parseFloat(value);
+            if (!isNaN(quantity) && quantity > 0) {
+                selectedMaterials[index].quantity = quantity;
+            }
+        }
+        
+        // 移除物料
+        function removeMaterial(index) {
+            selectedMaterials.splice(index, 1);
+            updateMaterialList();
+        }
+        
+        // 选择物料
+        function selectMaterial(material) {
+            // 检查物料是否已经在列表中
+            const existingIndex = selectedMaterials.findIndex(item => item.materialId === material.id);
+            if (existingIndex >= 0) {
+                showToast('该物料已经在列表中', 'info');
+                return;
+            }
+            
+            // 添加到选中列表
+            selectedMaterials.push({
+                materialId: material.id,
+                quantity: 1
+            });
+            
+            // 更新物料列表
+            updateMaterialList();
+            
+            // 清空搜索框
+            materialSearchInput.value = '';
+            materialDropdown.classList.add('hidden');
+        }
+
+        // 删除记录
+        async function deleteUsageRecord(id) {
+            if (!checkPermission('delete_inventory')) {
+                if (!isLoggedIn) {
+                    openLoginModal();
+                } else {
+                    showToast('权限不足，无法执行此操作', 'error');
+                }
+                return;
+            }
+            
+            // 确认删除
+            if (!confirm('确定要删除这条记录吗？')) {
+                return;
+            }
+            
+            try {
+                await API.Usage.delete(id);
+                
+                // 重新加载数据
+                await loadUsageData();
+                await loadMaterialData();
+                
+                // 更新表格
+                updateUsageTable();
+                
+                // 更新统计信息
+                await updateStatistics();
+                
+                // 更新图表
+                updateCharts();
+                
+                // 显示成功提示
+                showToast('记录删除成功', 'success');
+            } catch (error) {
+                showToast('删除失败：' + error.message, 'error');
+            }
+        }
+
+        // 计算库存状态
+        function calculateStatus(quantity, warningValue) {
+            if (quantity <= 0) return 'shortage';
+            if (quantity < warningValue) return 'warning';
+            return 'normal';
+        }
+
+        // 初始化图表
+        function initCharts() {
+            // 物料使用量排行图表
+            const materialUsageCtx = document.getElementById('materialUsageChart').getContext('2d');
+            materialUsageChart = new Chart(materialUsageCtx, {
+                type: 'bar',
+                data: getMaterialUsageChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '物料使用量排行'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // 月度使用趋势图表
+            const monthlyTrendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+            monthlyTrendChart = new Chart(monthlyTrendCtx, {
+                type: 'line',
+                data: getMonthlyTrendChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '月度使用趋势'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // 季度使用趋势图表
+            const quarterlyTrendCtx = document.getElementById('quarterlyTrendChart').getContext('2d');
+            quarterlyTrendChart = new Chart(quarterlyTrendCtx, {
+                type: 'line',
+                data: getQuarterlyTrendChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '季度使用趋势'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // 项目使用统计图表
+            const projectUsageCtx = document.getElementById('projectUsageChart').getContext('2d');
+            projectUsageChart = new Chart(projectUsageCtx, {
+                type: 'doughnut',
+                data: getProjectUsageChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '项目使用统计'
+                        }
+                    }
+                }
+            });
+            
+            // 使用量分布图表
+
+        }
+
+        // 更新图表
+        function updateCharts() {
+            if (materialUsageChart) {
+                materialUsageChart.data = getMaterialUsageChartData();
+                materialUsageChart.update();
+            }
+            
+            if (monthlyTrendChart) {
+                monthlyTrendChart.data = getMonthlyTrendChartData();
+                monthlyTrendChart.update();
+            }
+            
+            if (quarterlyTrendChart) {
+                quarterlyTrendChart.data = getQuarterlyTrendChartData();
+                quarterlyTrendChart.update();
+            }
+            
+            if (projectUsageChart) {
+                projectUsageChart.data = getProjectUsageChartData();
+                projectUsageChart.update();
+            }
+        }
+
+        // 获取物料使用量排行图表数据
+        function getMaterialUsageChartData() {
+            const materialUsage = {};
+            
+            usageData.forEach(item => {
+                const key = `${item.materialName}(${item.materialSpec})`;
+                materialUsage[key] = (materialUsage[key] || 0) + item.quantity;
+            });
+            
+            const sortedMaterialUsage = Object.entries(materialUsage)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            return {
+                labels: sortedMaterialUsage.map(item => item[0]),
+                datasets: [{
+                    label: '使用量',
+                    data: sortedMaterialUsage.map(item => item[1]),
+                    backgroundColor: getGradientColors(sortedMaterialUsage.length),
+                    borderColor: getGradientColors(sortedMaterialUsage.length, 0.8),
+                    borderWidth: 1
+                }]
+            };
+        }
+
+        // 获取月度使用趋势图表数据
+        function getMonthlyTrendChartData() {
+            const monthlyData = {};
+            const months = [];
+            const materialTypes = new Set();
+            
+            // 生成过去6个月的月份
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                months.push(monthKey);
+            }
+            
+            // 收集所有物料类型
+            usageData.forEach(item => {
+                materialTypes.add(item.materialName);
+            });
+            
+            // 初始化月度数据
+            const sortedMaterialTypes = Array.from(materialTypes).slice(0, 5); // 只显示前5种物料
+            sortedMaterialTypes.forEach(material => {
+                monthlyData[material] = {};
+                months.forEach(month => {
+                    monthlyData[material][month] = 0;
+                });
+            });
+            
+            // 统计每月每种物料的使用量
+            usageData.forEach(item => {
+                const monthKey = item.date.substring(0, 7);
+                if (sortedMaterialTypes.includes(item.materialName) && months.includes(monthKey)) {
+                    monthlyData[item.materialName][monthKey] += item.quantity;
+                }
+            });
+            
+            // 生成数据集
+            const datasets = sortedMaterialTypes.map((material, index) => {
+                const colors = getGradientColors(sortedMaterialTypes.length);
+                return {
+                    label: material,
+                    data: months.map(month => monthlyData[material][month]),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index].replace('1)', '0.1)'),
+                    tension: 0.4,
+                    fill: false
+                };
+            });
+            
+            return {
+                labels: months.map(month => {
+                    const [year, monthNum] = month.split('-');
+                    return `${year}年${monthNum}月`;
+                }),
+                datasets: datasets
+            };
+        }
+
+        // 获取项目使用统计图表数据
+        function getProjectUsageChartData() {
+            const projectMaterialUsage = {};
+            
+            // 统计每个项目使用的物料规格的总使用量
+            usageData.forEach(item => {
+                const key = `${item.projectName}`;
+                projectMaterialUsage[key] = (projectMaterialUsage[key] || 0) + item.quantity;
+            });
+            
+            const sortedProjectUsage = Object.entries(projectMaterialUsage)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8);
+            
+            return {
+                labels: sortedProjectUsage.map(item => item[0]),
+                datasets: [{
+                    label: '物料使用量',
+                    data: sortedProjectUsage.map(item => item[1]),
+                    backgroundColor: getGradientColors(sortedProjectUsage.length),
+                    borderColor: getGradientColors(sortedProjectUsage.length, 0.8),
+                    borderWidth: 1
+                }]
+            };
+        }
+        
+        // 获取季度使用趋势图表数据
+        function getQuarterlyTrendChartData() {
+            const quarterlyData = {};
+            const quarters = [];
+            
+            // 生成过去4个季度
+            for (let i = 3; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i * 3);
+                const year = date.getFullYear();
+                const quarter = Math.floor(date.getMonth() / 3) + 1;
+                const quarterKey = `${year}Q${quarter}`;
+                quarters.push(quarterKey);
+                quarterlyData[quarterKey] = 0;
+            }
+            
+            // 统计每个季度的使用量
+            usageData.forEach(item => {
+                const date = new Date(item.date);
+                const year = date.getFullYear();
+                const quarter = Math.floor(date.getMonth() / 3) + 1;
+                const quarterKey = `${year}Q${quarter}`;
+                
+                if (quarterlyData.hasOwnProperty(quarterKey)) {
+                    quarterlyData[quarterKey] += item.quantity;
+                }
+            });
+            
+            return {
+                labels: quarters,
+                datasets: [{
+                    label: '季度使用量',
+                    data: quarters.map(quarter => quarterlyData[quarter]),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+        }
+
+
+
+        // 获取渐变色数组
+        function getGradientColors(count, alpha = 0.7) {
+            const baseColors = [
+                `rgba(59, 130, 246, ${alpha})`,   // blue
+                `rgba(34, 197, 94, ${alpha})`,    // green
+                `rgba(245, 158, 11, ${alpha})`,   // yellow
+                `rgba(239, 68, 68, ${alpha})`,    // red
+                `rgba(168, 85, 247, ${alpha})`,   // purple
+                `rgba(14, 165, 233, ${alpha})`,   // cyan
+                `rgba(236, 72, 153, ${alpha})`,   // pink
+                `rgba(107, 114, 128, ${alpha})`,  // gray
+                `rgba(20, 184, 166, ${alpha})`,   // teal
+                `rgba(217, 70, 239, ${alpha})`    // violet
+            ];
+            
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            
+            return colors;
+        }
+
+        // 导出领用/退料记录
+        function exportUsageData(data = null) {
+            const exportData = data || filteredUsageData;
+            
+            if (exportData.length === 0) {
+                showToast('没有数据可以导出', 'warning');
+                return;
+            }
+            
+            // 创建CSV内容
+            const headers = ['记录类型', '项目合同号', '项目名称', '物料编码', '物料名称', '物料规格', '数量', '单位', '领退料人', '日期', '备注'];
+            const csvContent = [
+                headers.join(','),
+                ...exportData.map(item => [
+                    item.type === 'usage' ? '领料' : '退料',
+                    item.contractNumber,
+                    item.projectName,
+                    item.materialCode,
+                    item.materialName,
+                    item.materialSpec,
+                    item.quantity,
+                    item.unit,
+                    item.userName,
+                    item.date,
+                    item.remark || ''
+                ].join(','))
+            ].join('\n');
+            
+            // 创建Blob对象
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `辅料领退料记录_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            // 添加到DOM并触发点击
+            document.body.appendChild(link);
+            link.click();
+            
+            // 清理
+            document.body.removeChild(link);
+            
+            showToast('导出成功', 'success');
+        }
+
+        // 导出统计报告
+        function exportStatsReport() {
+            // 显示导出选项弹窗
+            showExportOptionsModal();
+        }
+
+        // 显示导出选项弹窗
+        function showExportOptionsModal() {
+            const projectContractMap = new Map();
+            usageData.forEach(item => {
+                const key = `${item.projectName}|${item.contractNumber}`;
+                if (!projectContractMap.has(key)) {
+                    projectContractMap.set(key, {
+                        projectName: item.projectName,
+                        contractNumber: item.contractNumber
+                    });
+                }
+            });
+            
+            const projectContractList = Array.from(projectContractMap.values());
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800">导出统计报告</h3>
+                        <button id="closeExportModal" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <i class="fa fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">导出类型</label>
+                            <select id="exportType" class="input-field">
+                                <option value="material_top10">物料使用量TOP10</option>
+                                <option value="monthly_trend">月度使用趋势</option>
+                                <option value="quarterly_trend">季度使用趋势</option>
+                                <option value="project_usage">项目使用统计</option>
+                            </select>
+                        </div>
+                        <div class="mb-4" id="filterSection">
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <select id="searchType" class="input-field text-sm">
+                                    <option value="projectName">按项目名称</option>
+                                    <option value="contractNumber">按合同号</option>
+                                </select>
+                                <div class="relative">
+                                    <input type="text" id="filterKeyword" class="input-field text-sm" placeholder="输入搜索关键词">
+                                    <div id="suggestionDropdown" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden"></div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">仅项目使用统计支持筛选，留空导出全部</p>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button id="cancelExportBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                            取消
+                        </button>
+                        <button id="confirmExportBtn" class="btn-primary">
+                            确定
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const exportTypeSelect = document.getElementById('exportType');
+            const filterSection = document.getElementById('filterSection');
+            const searchTypeSelect = document.getElementById('searchType');
+            const filterKeywordInput = document.getElementById('filterKeyword');
+            const suggestionDropdown = document.getElementById('suggestionDropdown');
+            
+            const updateFilterVisibility = function() {
+                if (exportTypeSelect.value === 'project_usage') {
+                    filterSection.style.display = 'block';
+                } else {
+                    filterSection.style.display = 'none';
+                }
+            };
+            
+            const showSuggestions = function() {
+                const keyword = filterKeywordInput.value.toLowerCase();
+                suggestionDropdown.innerHTML = '';
+                
+                if (!keyword) {
+                    suggestionDropdown.classList.add('hidden');
+                    return;
+                }
+                
+                const filteredItems = projectContractList.filter(item => {
+                    if (searchTypeSelect.value === 'projectName') {
+                        return item.projectName.toLowerCase().includes(keyword);
+                    } else {
+                        return item.contractNumber.toLowerCase().includes(keyword);
+                    }
+                });
+                
+                if (filteredItems.length === 0) {
+                    suggestionDropdown.classList.add('hidden');
+                    return;
+                }
+                
+                filteredItems.forEach(item => {
+                    const option = document.createElement('div');
+                    option.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm';
+                    option.innerHTML = searchTypeSelect.value === 'projectName' 
+                        ? `${item.projectName} (${item.contractNumber})`
+                        : `${item.contractNumber} - ${item.projectName}`;
+                    option.dataset.projectName = item.projectName;
+                    option.dataset.contractNumber = item.contractNumber;
+                    option.addEventListener('click', function() {
+                        filterKeywordInput.value = searchTypeSelect.value === 'projectName' 
+                            ? item.projectName 
+                            : item.contractNumber;
+                        suggestionDropdown.classList.add('hidden');
+                    });
+                    suggestionDropdown.appendChild(option);
+                });
+                
+                suggestionDropdown.classList.remove('hidden');
+            };
+            
+            updateFilterVisibility();
+            
+            exportTypeSelect.addEventListener('change', updateFilterVisibility);
+            searchTypeSelect.addEventListener('change', showSuggestions);
+            filterKeywordInput.addEventListener('input', showSuggestions);
+            
+            document.addEventListener('click', function(e) {
+                if (!suggestionDropdown.contains(e.target) && e.target !== filterKeywordInput) {
+                    suggestionDropdown.classList.add('hidden');
+                }
+            });
+            
+            document.getElementById('closeExportModal').addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            document.getElementById('cancelExportBtn').addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            document.getElementById('confirmExportBtn').addEventListener('click', function() {
+                const exportType = document.getElementById('exportType').value;
+                const searchType = document.getElementById('searchType').value;
+                const filterKeyword = document.getElementById('filterKeyword').value.trim();
+                document.body.removeChild(modal);
+                
+                generateExportReport(exportType, filterKeyword, searchType);
+            });
+        }
+        
+        // 生成导出报告
+        function generateExportReport(exportType, filterKeyword = '', searchType = 'projectName') {
+            const now = new Date();
+            const formattedDate = now.toISOString().split('T')[0];
+            const formattedTime = now.toTimeString().split(' ')[0];
+            
+            let csvContent = '';
+            let fileName = '';
+            
+            const filterData = function(items) {
+                if (!filterKeyword) return items;
+                if (searchType === 'projectName') {
+                    return items.filter(item => item.projectName.toLowerCase().includes(filterKeyword.toLowerCase()));
+                } else {
+                    return items.filter(item => item.contractNumber.toLowerCase().includes(filterKeyword.toLowerCase()));
+                }
+            };
+            
+            if (exportType === 'material_top10') {
+                const materialUsage = {};
+                usageData.forEach(item => {
+                    const key = `${item.materialName}(${item.materialSpec})`;
+                    materialUsage[key] = (materialUsage[key] || 0) + item.quantity;
+                });
+                
+                const sortedMaterials = Object.entries(materialUsage).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                
+                csvContent = '物料使用量TOP10报告\n';
+                csvContent += '================================\n';
+                csvContent += '生成日期: ' + formattedDate + '\n';
+                csvContent += '生成时间: ' + formattedTime + '\n';
+                csvContent += '================================\n\n';
+                
+                csvContent += '排名,物料名称(规格),使用量\n';
+                sortedMaterials.forEach(([material, quantity], index) => {
+                    csvContent += (index + 1) + ',"' + material + '"' + ',' + quantity + '\n';
+                });
+                
+                fileName = `物料使用量TOP10_${formattedDate}_${formattedTime.replace(/:/g, '-')}.csv`;
+            } else if (exportType === 'monthly_trend') {
+                const monthlyTrend = {};
+                usageData.forEach(item => {
+                    const month = item.date.substring(0, 7);
+                    if (!monthlyTrend[month]) {
+                        monthlyTrend[month] = {};
+                    }
+                    const key = `${item.materialName}(${item.materialSpec})`;
+                    if (!monthlyTrend[month][key]) {
+                        monthlyTrend[month][key] = { issue: 0, return: 0 };
+                    }
+                    if (item.type === 'issue') {
+                        monthlyTrend[month][key].issue += item.quantity;
+                    } else if (item.type === 'return') {
+                        monthlyTrend[month][key].return += item.quantity;
+                    }
+                });
+                
+                const sortedMonths = Object.keys(monthlyTrend).sort();
+                const firstMonth = sortedMonths[0];
+                const lastMonth = sortedMonths[sortedMonths.length - 1];
+                
+                const formatChineseMonth = function(monthStr) {
+                    const parts = monthStr.split('-');
+                    return `${parts[0]}年${parts[1]}月`;
+                };
+                
+                csvContent = '月度使用趋势报告\n';
+                csvContent += '================================\n';
+                csvContent += '生成日期: ' + formattedDate + '\n';
+                csvContent += '生成时间: ' + formattedTime + '\n';
+                csvContent += `${formatChineseMonth(firstMonth)}-${formatChineseMonth(lastMonth)}\n`;
+                csvContent += '================================\n\n';
+                
+                csvContent += '月份,物料名称(规格),领用总量,退料总量\n';
+                sortedMonths.forEach(month => {
+                    const materials = Object.entries(monthlyTrend[month]);
+                    materials.forEach(([material, data]) => {
+                        csvContent += '"' + formatChineseMonth(month) + '"' + ',' + '"' + material + '"' + ',' + data.issue + ',' + data.return + '\n';
+                    });
+                });
+                
+                fileName = `月度使用趋势_${formattedDate}_${formattedTime.replace(/:/g, '-')}.csv`;
+            } else if (exportType === 'quarterly_trend') {
+                const quarterlyTrend = {};
+                usageData.forEach(item => {
+                    const date = new Date(item.date);
+                    const quarterNum = Math.ceil((date.getMonth() + 1) / 3);
+                    const quarter = `${date.getFullYear()}Q${quarterNum}`;
+                    if (!quarterlyTrend[quarter]) {
+                        quarterlyTrend[quarter] = {};
+                    }
+                    const key = `${item.materialName}(${item.materialSpec})`;
+                    if (!quarterlyTrend[quarter][key]) {
+                        quarterlyTrend[quarter][key] = { issue: 0, return: 0 };
+                    }
+                    if (item.type === 'issue') {
+                        quarterlyTrend[quarter][key].issue += item.quantity;
+                    } else if (item.type === 'return') {
+                        quarterlyTrend[quarter][key].return += item.quantity;
+                    }
+                });
+                
+                const sortedQuarters = Object.keys(quarterlyTrend).sort();
+                const firstQuarter = sortedQuarters[0];
+                const lastQuarter = sortedQuarters[sortedQuarters.length - 1];
+                
+                const formatChineseQuarter = function(quarterStr) {
+                    const year = quarterStr.substring(0, 4);
+                    const qNum = parseInt(quarterStr.substring(5));
+                    const qNames = ['', '第一季度', '第二季度', '第三季度', '第四季度'];
+                    return `${year}年${qNames[qNum]}`;
+                };
+                
+                csvContent = '季度使用趋势报告\n';
+                csvContent += '================================\n';
+                csvContent += '生成日期: ' + formattedDate + '\n';
+                csvContent += '生成时间: ' + formattedTime + '\n';
+                csvContent += `${formatChineseQuarter(firstQuarter)}-${formatChineseQuarter(lastQuarter)}\n`;
+                csvContent += '================================\n\n';
+                
+                csvContent += '季度,物料名称(规格),领用总量,退料总量\n';
+                sortedQuarters.forEach(quarter => {
+                    const materials = Object.entries(quarterlyTrend[quarter]);
+                    materials.forEach(([material, data]) => {
+                        csvContent += '"' + formatChineseQuarter(quarter) + '"' + ',' + '"' + material + '"' + ',' + data.issue + ',' + data.return + '\n';
+                    });
+                });
+                
+                fileName = `季度使用趋势_${formattedDate}_${formattedTime.replace(/:/g, '-')}.csv`;
+            } else if (exportType === 'project_usage') {
+                const filteredItems = filterData(usageData);
+                
+                const projectUsageData = {};
+                filteredItems.forEach(item => {
+                    const key = `${item.projectName}|${item.contractNumber}`;
+                    if (!projectUsageData[key]) {
+                        projectUsageData[key] = {
+                            projectName: item.projectName,
+                            contractNumber: item.contractNumber,
+                            totalQuantity: 0,
+                            materials: {}
+                        };
+                    }
+                    const materialKey = `${item.materialName}(${item.materialSpec})`;
+                    projectUsageData[key].materials[materialKey] = (projectUsageData[key].materials[materialKey] || 0) + item.quantity;
+                    projectUsageData[key].totalQuantity += item.quantity;
+                });
+                
+                csvContent = '项目使用统计报告\n';
+                csvContent += '================================\n';
+                csvContent += '生成日期: ' + formattedDate + '\n';
+                csvContent += '生成时间: ' + formattedTime + '\n';
+                if (filterKeyword) {
+                    csvContent += `筛选条件: ${searchType === 'projectName' ? '项目名称' : '合同号'}包含 "${filterKeyword}"\n`;
+                }
+                csvContent += '================================\n\n';
+                
+                const sortedProjects = Object.values(projectUsageData).sort((a, b) => a.contractNumber.localeCompare(b.contractNumber));
+                
+                csvContent += '项目名称,合同号,使用总量\n';
+                sortedProjects.forEach(project => {
+                    csvContent += '"' + project.projectName + '"' + ',' + project.contractNumber + ',' + project.totalQuantity + '\n';
+                });
+                
+                fileName = `项目使用统计_${formattedDate}_${formattedTime.replace(/:/g, '-')}.csv`;
+            }
+            
+            // 添加报告说明
+            csvContent += '\n';
+            csvContent += '================================\n';
+            csvContent += '报告说明:\n';
+            csvContent += '1. 此报告由辅料管理系统自动生成\n';
+            csvContent += '2. 数据基于系统中的领用和退料记录\n';
+            csvContent += '3. 可使用Excel等电子表格软件打开查看\n';
+            csvContent += '================================\n';
+            
+            // 创建Blob对象
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+            
+            // 添加到DOM并触发点击
+            document.body.appendChild(link);
+            link.click();
+            
+            // 清理
+            document.body.removeChild(link);
+            
+            showToast('统计报告导出成功，请在下载文件夹中查看', 'success');
+        }
+        
+        // 显示统计分析弹窗
+        function showStatsModal() {
+            // 更新图表数据
+            updateCharts();
+            
+            // 显示弹窗
+            statsModal.classList.remove('hidden');
+        }
+
+        // 关闭统计分析弹窗
+        function closeStatsModalFunc() {
+            statsModal.classList.add('hidden');
+        }
+
+        // 关闭领用记录弹窗
+        function closeUsageModalFunc() {
+            usageModal.classList.add('hidden');
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            loading.classList.remove('hidden');
+            usageTableContainer.classList.add('hidden');
+            emptyData.classList.add('hidden');
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+
+        // 更新最后更新时间
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            lastUpdateTime.textContent = formattedDate;
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        // 显示Toast提示
+        function showToast(message, type = 'info') {
+            // 设置图标和颜色
+            switch (type) {
+                case 'success':
+                    toastIcon.innerHTML = '<i class="fa fa-check-circle text-xl"></i>';
+                    toastIcon.className = 'text-green-500';
+                    toastTitle.textContent = '成功';
+                    break;
+                case 'error':
+                    toastIcon.innerHTML = '<i class="fa fa-times-circle text-xl"></i>';
+                    toastIcon.className = 'text-red-500';
+                    toastTitle.textContent = '错误';
+                    break;
+                case 'warning':
+                    toastIcon.innerHTML = '<i class="fa fa-exclamation-triangle text-xl"></i>';
+                    toastIcon.className = 'text-yellow-500';
+                    toastTitle.textContent = '警告';
+                    break;
+                default:
+                    toastIcon.innerHTML = '<i class="fa fa-info-circle text-xl"></i>';
+                    toastIcon.className = 'text-blue-500';
+                    toastTitle.textContent = '提示';
+            }
+            
+            // 设置消息内容
+            toastMessage.textContent = message;
+            
+            // 显示Toast
+            toast.classList.remove('translate-x-full');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                hideToast();
+            }, 3000);
+        }
+
+        // 隐藏Toast提示
+        function hideToast() {
+            toast.classList.add('translate-x-full');
+        }
+
+        // 返回主页面
+        function backToMainPage() {
+            window.location.href = 'index.html';
+        }
+
+        // 更新登录状态UI
+        function updateLoginStatusUI() {
+            const currentUserElement = document.getElementById('currentUser');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (isLoggedIn && currentUser) {
+                currentUserElement.textContent = currentUser.username;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+            } else {
+                currentUserElement.textContent = '未登录';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+            }
+        }
+
+        // 打开登录模态框
+        function openLoginModal() {
+            const loginModal = document.getElementById('loginModal');
+            if (loginModal) {
+                loginModal.classList.remove('hidden');
+            }
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            if (usernameInput) {
+                usernameInput.value = '';
+                usernameInput.focus();
+            }
+            if (passwordInput) {
+                passwordInput.value = '';
+            }
+        }
+
+        // 关闭登录模态框
+        function closeLoginModal() {
+            const loginModal = document.getElementById('loginModal');
+            if (loginModal) {
+                loginModal.classList.add('hidden');
+            }
+        }
+
+        // 处理登录
+        async function handleLogin() {
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            try {
+                const result = await API.User.login(username, password);
+                isLoggedIn = true;
+                currentUser = result.user;
+                closeLoginModal();
+                showToast('登录成功！可以进行数据修改操作', 'success');
+                
+                // 更新登录状态显示
+                updateLoginStatusUI();
+                
+                // 重新加载数据
+                await loadUsageData();
+                await loadMaterialData();
+                updateUsageTable();
+                await updateStatistics();
+                updateCharts();
+            } catch (error) {
+                showToast('用户名或密码错误！', 'error');
+            }
+        }
+
+        // 处理登出
+        function handleLogout() {
+            API.User.logout();
+            isLoggedIn = false;
+            currentUser = null;
+            updateLoginStatusUI();
+            showToast('已成功登出', 'info');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 返回主页面按钮点击事件
+            document.getElementById('backToMainBtn').addEventListener('click', backToMainPage);
+            
+            // 记录类型选择器变更事件
+            document.getElementById('recordType').addEventListener('change', function() {
+                const recordType = this.value;
+                const userLabel = document.getElementById('userLabel');
+                const dateLabel = document.getElementById('dateLabel');
+                
+                if (recordType === 'usage') {
+                    userLabel.textContent = '领用人 *';
+                    dateLabel.textContent = '领用日期 *';
+                } else {
+                    userLabel.textContent = '退料人 *';
+                    dateLabel.textContent = '退料日期 *';
+                }
+            });
+            
+            // 用户菜单按钮点击事件
+            document.getElementById('userMenuBtn').addEventListener('click', function() {
+                document.getElementById('userMenu').classList.toggle('hidden');
+            });
+            
+            // 点击页面其他地方关闭用户菜单
+            document.addEventListener('click', function(e) {
+                const userMenu = document.getElementById('userMenu');
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+            
+            // 登录按钮点击事件
+            document.getElementById('loginBtn').addEventListener('click', function() {
+                openLoginModal();
+            });
+            
+            // 退出登录按钮点击事件
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                handleLogout();
+                setTimeout(() => {
+                    backToMainPage();
+                }, 1000);
+            });
+            
+            // 登录模态框登录按钮点击事件
+            document.getElementById('loginBtnModal').addEventListener('click', handleLogin);
+            
+            // 登录模态框取消按钮点击事件
+            document.getElementById('cancelLoginBtn').addEventListener('click', closeLoginModal);
+            
+            // 登录表单提交事件
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleLogin();
+            });
+            
+            // 搜索按钮点击事件
+            searchUsageBtn.addEventListener('click', performSearch);
+            
+            // 重置按钮点击事件
+            resetUsageBtn.addEventListener('click', resetSearch);
+            
+            // 回车键触发搜索
+            contractSearch.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            projectSearch.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            materialSearch.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            // 物料搜索输入事件
+            materialSearchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                if (searchTerm.length > 0) {
+                    showMaterialSearchResults(searchTerm);
+                } else {
+                    materialDropdown.classList.add('hidden');
+                }
+            });
+            
+            // 点击页面其他地方关闭物料下拉框
+            document.addEventListener('click', function(e) {
+                if (!materialSearchInput.contains(e.target) && !materialDropdown.contains(e.target)) {
+                    materialDropdown.classList.add('hidden');
+                }
+            });
+            
+
+            
+            // 分页按钮点击事件
+            prevPageBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateUsageTable();
+                }
+            });
+            
+            nextPageBtn.addEventListener('click', function() {
+                const maxPage = Math.ceil(filteredUsageData.length / itemsPerPage);
+                if (currentPage < maxPage) {
+                    currentPage++;
+                    updateUsageTable();
+                }
+            });
+            
+            prevPageMobileBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateUsageTable();
+                }
+            });
+            
+            nextPageMobileBtn.addEventListener('click', function() {
+                const maxPage = Math.ceil(filteredUsageData.length / itemsPerPage);
+                if (currentPage < maxPage) {
+                    currentPage++;
+                    updateUsageTable();
+                }
+            });
+            
+            // 新增领退料记录按钮点击事件
+            document.getElementById('addRecordBtn').addEventListener('click', function() {
+                if (checkPermission('add_usage') || checkPermission('add_return')) {
+                    openAddUsageModal();
+                } else if (!isLoggedIn) {
+                    openLoginModal();
+                } else {
+                    showToast('权限不足，无法执行此操作', 'error');
+                }
+            });
+            
+            // 导出领用记录按钮点击事件
+            document.getElementById('exportUsageBtn').addEventListener('click', function() {
+                if (checkPermission('export_usage')) {
+                    showUsageExportModal();
+                } else if (!isLoggedIn) {
+                    openLoginModal();
+                } else {
+                    showToast('权限不足，无法执行此操作', 'error');
+                }
+            });
+            
+            // 显示领用记录导出选项弹窗
+            function showUsageExportModal() {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-gray-800">导出领用记录</h3>
+                            <button id="closeUsageExportModal" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <i class="fa fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div class="px-6 py-4">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">选择导出范围</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="exportToday" class="p-3 rounded-lg border-2 border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium">
+                                        <div class="text-2xl mb-1">📅</div>
+                                        <div class="text-sm">今日领用</div>
+                                    </button>
+                                    <button id="exportWeek" class="p-3 rounded-lg border-2 border-green-500 bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium">
+                                        <div class="text-2xl mb-1">📆</div>
+                                        <div class="text-sm">本周领用</div>
+                                    </button>
+                                    <button id="exportMonth" class="p-3 rounded-lg border-2 border-orange-500 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors font-medium">
+                                        <div class="text-2xl mb-1">📊</div>
+                                        <div class="text-sm">本月领用</div>
+                                    </button>
+                                    <button id="exportAll" class="p-3 rounded-lg border-2 border-purple-500 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors font-medium">
+                                        <div class="text-2xl mb-1">📈</div>
+                                        <div class="text-sm">总领用记录</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                            <button id="cancelUsageExportBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                const closeModal = function() {
+                    document.body.removeChild(modal);
+                };
+                
+                document.getElementById('closeUsageExportModal').addEventListener('click', closeModal);
+                document.getElementById('cancelUsageExportBtn').addEventListener('click', closeModal);
+                
+                const getTodayData = function() {
+                    const today = new Date().toISOString().split('T')[0];
+                    return usageData.filter(item => item.date === today);
+                };
+                
+                const getWeekData = function() {
+                    const now = new Date();
+                    const dayOfWeek = now.getDay() || 7;
+                    const monday = new Date(now);
+                    monday.setDate(now.getDate() - dayOfWeek + 1);
+                    monday.setHours(0, 0, 0, 0);
+                    return usageData.filter(item => new Date(item.date) >= monday);
+                };
+                
+                const getMonthData = function() {
+                    const now = new Date();
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    return usageData.filter(item => new Date(item.date) >= firstDay);
+                };
+                
+                document.getElementById('exportToday').addEventListener('click', function() {
+                    exportUsageData(getTodayData());
+                    closeModal();
+                });
+                
+                document.getElementById('exportWeek').addEventListener('click', function() {
+                    exportUsageData(getWeekData());
+                    closeModal();
+                });
+                
+                document.getElementById('exportMonth').addEventListener('click', function() {
+                    exportUsageData(getMonthData());
+                    closeModal();
+                });
+                
+                document.getElementById('exportAll').addEventListener('click', function() {
+                    exportUsageData(usageData);
+                    closeModal();
+                });
+            }
+            
+            // 使用量统计分析按钮点击事件
+            document.getElementById('usageStatsBtn').addEventListener('click', function() {
+                if (checkPermission('export_stats')) {
+                    showStatsModal();
+                } else if (!isLoggedIn) {
+                    openLoginModal();
+                } else {
+                    showToast('权限不足，无法执行此操作', 'error');
+                }
+            });
+            
+            // 弹窗关闭按钮点击事件
+            closeUsageModal.addEventListener('click', closeUsageModalFunc);
+            
+            // 弹窗取消按钮点击事件
+            cancelUsageBtn.addEventListener('click', closeUsageModalFunc);
+            
+            // 弹窗确认按钮点击事件
+            confirmUsageBtn.addEventListener('click', saveUsageRecord);
+            
+            // 点击弹窗外部关闭弹窗
+            usageModal.addEventListener('click', function(e) {
+                if (e.target === usageModal) {
+                    closeUsageModalFunc();
+                }
+            });
+            
+            // 统计弹窗关闭按钮点击事件
+            closeStatsModal.addEventListener('click', closeStatsModalFunc);
+            
+            // 统计弹窗导出按钮点击事件
+            exportStatsBtn.addEventListener('click', exportStatsReport);
+            
+            // 点击统计弹窗外部关闭弹窗
+            statsModal.addEventListener('click', function(e) {
+                if (e.target === statsModal) {
+                    closeStatsModalFunc();
+                }
+            });
+            
+            // Toast关闭按钮点击事件
+            closeToast.addEventListener('click', hideToast);
+        }
+
+        // 显示物料搜索结果
+        function showMaterialSearchResults(searchTerm) {
+            // 搜索物料
+            const filteredMaterials = materialData.filter(material => 
+                material.name.toLowerCase().includes(searchTerm) ||
+                material.spec.toLowerCase().includes(searchTerm) ||
+                material.code.toLowerCase().includes(searchTerm)
+            );
+            
+            // 清空下拉框
+            materialDropdown.innerHTML = '';
+            
+            if (filteredMaterials.length > 0) {
+                // 添加搜索结果
+                filteredMaterials.forEach(material => {
+                    const item = document.createElement('div');
+                    item.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer transition-colors';
+                    item.innerHTML = `
+                        <div class="font-medium">${material.name}</div>
+                        <div class="text-xs text-gray-500">${material.code} - ${material.spec} - 库存: ${material.quantity}${material.unit}</div>
+                    `;
+                    item.addEventListener('click', function() {
+                        selectMaterial(material);
+                    });
+                    materialDropdown.appendChild(item);
+                });
+                
+                // 显示下拉框
+                materialDropdown.classList.remove('hidden');
+            } else {
+                // 显示无结果提示
+                const noResult = document.createElement('div');
+                noResult.className = 'px-4 py-2 text-gray-500 text-center';
+                noResult.textContent = '未找到匹配的物料';
+                materialDropdown.appendChild(noResult);
+                materialDropdown.classList.remove('hidden');
+            }
+        }
+
+        // 选择物料
+        function selectMaterial(material) {
+            // 检查物料是否已经在列表中
+            const existingIndex = selectedMaterials.findIndex(item => item.materialId === material.id);
+            if (existingIndex >= 0) {
+                showToast('该物料已经在列表中', 'info');
+                return;
+            }
+            
+            // 添加到选中列表
+            selectedMaterials.push({
+                materialId: material.id,
+                quantity: 1
+            });
+            
+            // 更新物料列表
+            updateMaterialList();
+            
+            // 清空搜索框
+            materialSearchInput.value = '';
+            materialDropdown.classList.add('hidden');
+        }
+
+        // 根据时间段筛选使用记录
+        function filterUsageByPeriod(period) {
+            const today = new Date().toISOString().split('T')[0];
+            let filteredData = [];
+            
+            switch (period) {
+                case 'today':
+                    filteredData = usageData.filter(item => item.date === today);
+                    break;
+                case 'week':
+                    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                    filteredData = usageData.filter(item => item.date >= oneWeekAgo);
+                    break;
+                case 'month':
+                    const oneMonthAgo = new Date();
+                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                    const monthStart = oneMonthAgo.toISOString().split('T')[0];
+                    filteredData = usageData.filter(item => item.date >= monthStart);
+                    break;
+                case 'all':
+                default:
+                    filteredData = [...usageData];
+                    break;
+            }
+            
+            // 更新筛选数据
+            filteredUsageData = filteredData;
+            
+            // 重置页码
+            currentPage = 1;
+            
+            // 更新表格
+            updateUsageTable();
+            
+            // 显示提示
+            const periodText = {
+                'today': '今日',
+                'week': '本周',
+                'month': '本月',
+                'all': '全部'
+            };
+            showToast(`已筛选${periodText[period] || '全部'}领用记录`, 'info');
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

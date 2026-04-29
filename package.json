@@ -1,0 +1,22 @@
+{
+  "name": "auxiliary-material-board",
+  "version": "1.0.0",
+  "description": "辅料管理看板 - 全栈改造项目",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "deploy": "vercel deploy --prod"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "xlsx": "^0.18.5",
+    "@supabase/supabase-js": "^2.43.4",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "vercel": "^34.1.0"
+  }
+}
