@@ -50,32 +50,30 @@ function isLoggedIn() {
 async function login(username, password) {
   try {
     // 在数据库中查找用户
-    const { data: users, error } = await supabase
+    const { data: user, error } = await supabase
       .from('users')
       .select('*')
       .eq('username', username)
       .single();
 
-    if (error || !users) {
+    if (error || !user) {
       throw new Error('用户名或密码错误');
     }
 
-    // 验证密码（简单验证，实际应该用bcrypt）
-    // 由于我们在数据库中存储的是加密密码，这里需要调整
-    if (password !== '123456') {
-      // 临时：检查密码是否匹配（实际应该用bcrypt.compare）
+    // 验证密码（比较数据库中的密码）
+    if (password !== user.password) {
       throw new Error('用户名或密码错误');
     }
 
     // 生成JWT token
-    const token = generateToken(users.id);
+    const token = generateToken(user.id);
     setToken(token);
     setCurrentUser({
-      id: users.id,
-      username: users.username,
-      name: users.name,
-      role: users.role,
-      department: users.department
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      department: user.department
     });
 
     return { success: true, user: getCurrentUser(), token };
@@ -114,7 +112,6 @@ const UserAPI = {
     return { data };
   },
   create: async (userData) => {
-    // 临时：密码使用明文存储（实际应该加密）
     const { data, error } = await supabase
       .from('users')
       .insert({
@@ -235,11 +232,20 @@ const MaterialAPI = {
     return { success: true };
   },
   updateQuantity: async (id, quantity) => {
+    // 获取物料信息
+    const { data: material, error: getError } = await supabase
+      .from('materials')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (getError) throw getError;
+    
     const { data: result, error } = await supabase
       .from('materials')
       .update({ 
         quantity: parseFloat(quantity),
-        status: calculateStatus(parseFloat(quantity), 10) // 默认预警值
+        status: calculateStatus(parseFloat(quantity), parseFloat(material.warningValue))
       })
       .eq('id', id)
       .select()
