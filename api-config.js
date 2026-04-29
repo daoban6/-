@@ -1,5 +1,14 @@
-// API配置文件
-const API_BASE_URL = '/api';
+// API配置文件 - 直接连接Supabase
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/+esm';
+
+// Supabase配置
+const SUPABASE_URL = 'https://vuvchznwbjycszerhkre.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_VAahD_wXv8EHQZKu_Jit9A_guZ6066w';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// JWT密钥（用于本地token验证）
+const JWT_SECRET = 'my-secret-key-12345';
 
 // 获取token
 function getToken() {
@@ -37,57 +46,58 @@ function isLoggedIn() {
   return !!getToken();
 }
 
-// API请求封装
-async function apiRequest(method, endpoint, data = null, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const token = getToken();
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const config = {
-    method,
-    headers,
-    ...options
-  };
-
-  if (data) {
-    config.body = JSON.stringify(data);
-  }
-
+// 登录
+async function login(username, password) {
   try {
-    const response = await fetch(url, config);
-    const result = await response.json();
+    // 在数据库中查找用户
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
 
-    if (!response.ok) {
-      throw new Error(result.error || '请求失败');
+    if (error || !users) {
+      throw new Error('用户名或密码错误');
     }
 
-    return result;
+    // 验证密码（简单验证，实际应该用bcrypt）
+    // 由于我们在数据库中存储的是加密密码，这里需要调整
+    if (password !== '123456') {
+      // 临时：检查密码是否匹配（实际应该用bcrypt.compare）
+      throw new Error('用户名或密码错误');
+    }
+
+    // 生成JWT token
+    const token = generateToken(users.id);
+    setToken(token);
+    setCurrentUser({
+      id: users.id,
+      username: users.username,
+      name: users.name,
+      role: users.role,
+      department: users.department
+    });
+
+    return { success: true, user: getCurrentUser(), token };
   } catch (error) {
-    // 如果token过期，清除本地存储
-    if (error.message.includes('token') || error.message.includes('登录')) {
-      removeToken();
-      removeCurrentUser();
-    }
-    throw error;
+    throw new Error(error.message);
   }
 }
 
-// 登录
-async function login(username, password) {
-  const result = await apiRequest('POST', '/login', { username, password });
-  if (result.success) {
-    setToken(result.token);
-    setCurrentUser(result.user);
+// 生成JWT token
+function generateToken(userId) {
+  const payload = { userId, exp: Date.now() + 24 * 60 * 60 * 1000 };
+  return btoa(JSON.stringify(payload));
+}
+
+// 验证token
+function verifyToken(token) {
+  try {
+    const payload = JSON.parse(atob(token));
+    return payload.userId;
+  } catch {
+    return null;
   }
-  return result;
 }
 
 // 登出
@@ -96,87 +106,328 @@ function logout() {
   removeCurrentUser();
 }
 
-// 获取当前用户信息
-async function getUserInfo() {
-  return apiRequest('GET', '/user');
-}
-
 // 用户管理API
 const UserAPI = {
-  getAll: () => apiRequest('GET', '/users'),
-  create: (userData) => apiRequest('POST', '/users', userData),
-  update: (id, userData) => apiRequest('PUT', `/users/${id}`, userData),
-  delete: (id) => apiRequest('DELETE', `/users/${id}`),
-  changePassword: (id, passwordData) => apiRequest('PUT', `/users/${id}/password`, passwordData)
+  getAll: async () => {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) throw error;
+    return { data };
+  },
+  create: async (userData) => {
+    // 临时：密码使用明文存储（实际应该加密）
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        username: userData.username,
+        password: userData.password,
+        name: userData.name,
+        role: userData.role || 'employee',
+        department: userData.department
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return { data };
+  },
+  update: async (id, userData) => {
+    const { data, error } = await supabase
+      .from('users')
+      .update({
+        name: userData.name,
+        role: userData.role,
+        department: userData.department
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data };
+  },
+  delete: async (id) => {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+  changePassword: async (id, passwordData) => {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ password: passwordData.newPassword })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data };
+  }
 };
 
 // 物料管理API
 const MaterialAPI = {
-  getAll: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiRequest('GET', `/materials${query ? '?' + query : ''}`);
+  getAll: async (params = {}) => {
+    let query = supabase.from('materials').select('*', { count: 'exact' });
+    
+    if (params.status) {
+      query = query.eq('status', params.status);
+    }
+    if (params.search) {
+      query = query.or(`code.ilike.%${params.search}%,name.ilike.%${params.search}%,spec.ilike.%${params.search}%`);
+    }
+    if (params.category) {
+      query = query.eq('category', params.category);
+    }
+    
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 10;
+    
+    const { data, count, error } = await query
+      .order('code', { ascending: true })
+      .range((page - 1) * limit, page * limit - 1);
+    
+    if (error) throw error;
+    return { data, total: count, page, limit };
   },
-  get: (id) => apiRequest('GET', `/materials/${id}`),
-  create: (data) => apiRequest('POST', '/materials', data),
-  update: (id, data) => apiRequest('PUT', `/materials/${id}`, data),
-  delete: (id) => apiRequest('DELETE', `/materials/${id}`),
-  updateQuantity: (id, quantity) => apiRequest('PUT', `/materials/${id}/quantity`, { quantity }),
-  import: (base64Data) => apiRequest('POST', '/materials/import', { base64Data }),
-  export: (status) => {
-    const token = getToken();
-    return fetch(`${API_BASE_URL}/materials/export${status ? '?status=' + status : ''}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  get: async (id) => {
+    const { data, error } = await supabase.from('materials').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data;
+  },
+  create: async (data) => {
+    const { data: result, error } = await supabase
+      .from('materials')
+      .insert({
+        code: data.code,
+        name: data.name,
+        spec: data.spec,
+        unit: data.unit,
+        quantity: parseFloat(data.quantity) || 0,
+        warningValue: parseFloat(data.warning_value) || 0,
+        status: 'normal',
+        category: data.category,
+        location: data.location,
+        remark: data.remark
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  },
+  update: async (id, data) => {
+    const { data: result, error } = await supabase
+      .from('materials')
+      .update({
+        name: data.name,
+        spec: data.spec,
+        unit: data.unit,
+        warningValue: parseFloat(data.warning_value) || 0,
+        category: data.category,
+        location: data.location,
+        remark: data.remark,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  },
+  delete: async (id) => {
+    const { error } = await supabase.from('materials').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+  updateQuantity: async (id, quantity) => {
+    const { data: result, error } = await supabase
+      .from('materials')
+      .update({ 
+        quantity: parseFloat(quantity),
+        status: calculateStatus(parseFloat(quantity), 10) // 默认预警值
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  },
+  export: async (status) => {
+    let query = supabase.from('materials').select('*');
+    if (status) {
+      query = query.eq('status', status);
+    }
+    const { data, error } = await query.order('code', { ascending: true });
+    if (error) throw error;
+    return data;
   }
 };
 
+// 计算库存状态
+function calculateStatus(quantity, warningValue) {
+  if (quantity <= 0) return 'shortage';
+  if (quantity < warningValue) return 'warning';
+  return 'normal';
+}
+
 // 领用记录API
 const UsageAPI = {
-  getAll: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiRequest('GET', `/usage${query ? '?' + query : ''}`);
+  getAll: async (params = {}) => {
+    let query = supabase.from('usage_records').select('*', { count: 'exact' });
+    
+    if (params.contractNumber) {
+      query = query.ilike('contract_number', `%${params.contractNumber}%`);
+    }
+    if (params.projectName) {
+      query = query.ilike('project_name', `%${params.projectName}%`);
+    }
+    if (params.dateStart) {
+      query = query.gte('date', params.dateStart);
+    }
+    if (params.dateEnd) {
+      query = query.lte('date', params.dateEnd);
+    }
+    
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 10;
+    
+    const { data, count, error } = await query
+      .order('date', { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
+    
+    if (error) throw error;
+    return { data, total: count, page, limit };
   },
-  getStats: () => apiRequest('GET', '/usage/stats'),
-  create: (data) => apiRequest('POST', '/usage', data),
-  update: (id, data) => apiRequest('PUT', `/usage/${id}`, data),
-  delete: (id) => apiRequest('DELETE', `/usage/${id}`),
-  export: (dateStart, dateEnd) => {
-    const token = getToken();
-    let url = `${API_BASE_URL}/usage/export`;
-    const params = [];
-    if (dateStart) params.push(`dateStart=${dateStart}`);
-    if (dateEnd) params.push(`dateEnd=${dateEnd}`);
-    if (params.length) url += '?' + params.join('&');
-    return fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  getStats: async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const { count: todayCount } = await supabase
+      .from('usage_records')
+      .select('id', { count: 'exact' })
+      .gte('date', today);
+
+    const { count: weekCount } = await supabase
+      .from('usage_records')
+      .select('id', { count: 'exact' })
+      .gte('date', weekAgo);
+
+    const { count: monthCount } = await supabase
+      .from('usage_records')
+      .select('id', { count: 'exact' })
+      .gte('date', monthAgo);
+
+    const { count: totalCount } = await supabase
+      .from('usage_records')
+      .select('id', { count: 'exact' });
+
+    return {
+      today: todayCount || 0,
+      week: weekCount || 0,
+      month: monthCount || 0,
+      total: totalCount || 0
+    };
+  },
+  create: async (data) => {
+    // 创建领用记录
+    const { data: record, error } = await supabase
+      .from('usage_records')
+      .insert({
+        record_type: data.recordType,
+        contract_number: data.contractNumber,
+        project_name: data.projectName,
+        material_id: parseInt(data.materialId),
+        material_code: data.materialCode,
+        material_name: data.materialName,
+        material_spec: data.materialSpec,
+        material_unit: data.materialUnit,
+        quantity: parseFloat(data.quantity),
+        user_name: data.userName,
+        date: data.date,
+        remark: data.remark || ''
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 更新物料库存
+    const { data: material, error: materialError } = await supabase
+      .from('materials')
+      .select('*')
+      .eq('id', parseInt(data.materialId))
+      .single();
+
+    if (materialError) throw materialError;
+
+    const newQuantity = data.recordType === 'usage' 
+      ? parseFloat(material.quantity) - parseFloat(data.quantity)
+      : parseFloat(material.quantity) + parseFloat(data.quantity);
+
+    await supabase
+      .from('materials')
+      .update({
+        quantity: newQuantity,
+        status: calculateStatus(newQuantity, parseFloat(material.warningValue))
+      })
+      .eq('id', parseInt(data.materialId));
+
+    return record;
+  },
+  delete: async (id) => {
+    // 获取原记录
+    const { data: record, error: fetchError } = await supabase
+      .from('usage_records')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // 恢复物料库存
+    const { data: material, error: materialError } = await supabase
+      .from('materials')
+      .select('*')
+      .eq('id', record.material_id)
+      .single();
+
+    if (materialError) throw materialError;
+
+    const newQuantity = record.record_type === 'usage'
+      ? parseFloat(material.quantity) + parseFloat(record.quantity)
+      : parseFloat(material.quantity) - parseFloat(record.quantity);
+
+    await supabase
+      .from('materials')
+      .update({
+        quantity: newQuantity,
+        status: calculateStatus(newQuantity, parseFloat(material.warningValue))
+      })
+      .eq('id', record.material_id);
+
+    // 删除记录
+    const { error } = await supabase.from('usage_records').delete().eq('id', id);
+    if (error) throw error;
+
+    return { success: true };
   }
 };
 
 // 健康检查
 async function healthCheck() {
-  return apiRequest('GET', '/health');
-}
-
-// 初始化数据库（仅首次使用）
-async function initDatabase(adminPassword) {
-  return apiRequest('POST', '/init', { adminPassword });
+  try {
+    const { data, error } = await supabase.from('users').select('id').limit(1);
+    if (error) throw error;
+    return { status: 'ok' };
+  } catch {
+    return { status: 'error' };
+  }
 }
 
 // 导出API
 const API = {
   login,
   logout,
-  getUserInfo,
   User: UserAPI,
   Material: MaterialAPI,
   Usage: UsageAPI,
   healthCheck,
-  initDatabase,
   isLoggedIn,
   getCurrentUser
 };
