@@ -100,197 +100,206 @@
                         <i class="fa fa-search mr-2"></i>搜索
                     </button>
                     <button id="resetBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
-                        <i class="fa fa-refresh mr-1"></i>重置
+                        <i class="fa fa-refresh mr-2"></i>重置
                     </button>
                 </div>
             </div>
         </div>
-        
+
         <!-- 统计卡片区 -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <!-- 辅料总数 -->
-            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
+            <div class="bg-white rounded-lg shadow-sm p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">辅料总数</p>
-                        <p class="text-2xl font-bold text-gray-800" id="totalCount">0</p>
+                        <p class="text-sm text-gray-500">辅料总数</p>
+                        <p id="totalCount" class="text-2xl font-bold text-blue-600">0</p>
                     </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i class="fa fa-cubes text-blue-500 text-xl"></i>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-cubes text-blue-600 text-xl"></i>
                     </div>
                 </div>
             </div>
             
             <!-- 正常库存 -->
-            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
+            <div class="bg-white rounded-lg shadow-sm p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">正常库存</p>
-                        <p class="text-2xl font-bold text-gray-800" id="normalStockCount">0</p>
+                        <p class="text-sm text-gray-500">正常库存</p>
+                        <p id="normalStockCount" class="text-2xl font-bold text-green-600">0</p>
                     </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i class="fa fa-check-circle text-green-500 text-xl"></i>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-check-circle text-green-600 text-xl"></i>
                     </div>
                 </div>
             </div>
             
             <!-- 库存预警 -->
-            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
+            <div class="bg-white rounded-lg shadow-sm p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">库存预警</p>
-                        <p class="text-2xl font-bold text-gray-800" id="warningStockCount">0</p>
+                        <p class="text-sm text-gray-500">库存预警</p>
+                        <p id="warningStockCount" class="text-2xl font-bold text-yellow-600">0</p>
                     </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i class="fa fa-exclamation-triangle text-yellow-500 text-xl"></i>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-exclamation-triangle text-yellow-600 text-xl"></i>
                     </div>
                 </div>
             </div>
             
             <!-- 库存不足 -->
-            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-red-500">
+            <div class="bg-white rounded-lg shadow-sm p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">库存不足</p>
-                        <p class="text-2xl font-bold text-gray-800" id="shortageStockCount">0</p>
+                        <p class="text-sm text-gray-500">库存不足</p>
+                        <p id="shortageStockCount" class="text-2xl font-bold text-red-600">0</p>
                     </div>
-                    <div class="bg-red-100 p-3 rounded-full">
-                        <i class="fa fa-times-circle text-red-500 text-xl"></i>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-times-circle text-red-600 text-xl"></i>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- 加载状态 -->
-        <div id="loading" class="hidden py-8 flex justify-center items-center">
+
+        <!-- 物料表格区 -->
+        <div id="loading" class="flex items-center justify-center py-12">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <span class="ml-3 text-gray-600">加载中...</span>
         </div>
         
-        <!-- 物料列表展示区 -->
-        <div id="materialTableContainer" class="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">物料编码</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">物料名称</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">物料规格</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">现有数量</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">单位</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">货架库位</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">库存状态</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="materialTableBody" class="bg-white divide-y divide-gray-200">
-                        <!-- 物料数据将通过JavaScript动态生成 -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- 表格底部信息 -->
-            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div class="text-sm text-gray-700">
-                    显示 <span id="startRange">1</span> 到 <span id="endRange">10</span> 条，共 <span id="totalDataCount">0</span> 条记录
+        <div id="materialTableContainer" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">物料编码</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">物料名称</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">物料规格</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">现有数量</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">单位</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预警值</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">货架库位</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">库存状态</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
                 </div>
-                <div class="flex space-x-2">
-                    <button id="prevPage" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        上一页
+                
+                <!-- 空数据提示 -->
+                <div id="emptyData" class="text-center py-12 hidden">
+                    <i class="fa fa-inbox text-gray-300 text-4xl mb-4"></i>
+                    <p class="text-gray-500">暂无数据</p>
+                    <button id="emptyResetBtn" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                        导入物料数据
                     </button>
-                    <button id="nextPage" class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        下一页
-                    </button>
+                </div>
+                
+                <!-- 分页控件 -->
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        显示 <span id="startRange">1</span> 到 <span id="endRange">10</span> 条，共 <span id="totalDataCount">0</span> 条记录
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="prevPage" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa fa-chevron-left"></i> 上一页
+                        </button>
+                        <button id="nextPage" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            下一页 <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- 空数据提示区 -->
-        <div id="emptyData" class="hidden py-12 flex flex-col items-center justify-center bg-white rounded-lg shadow-sm">
-            <i class="fa fa-search text-gray-300 text-5xl mb-4"></i>
-            <p class="text-gray-500 text-lg">未找到匹配的物料信息</p>
-            <p class="text-gray-400 text-sm mt-2">请尝试调整搜索条件或重置搜索</p>
-            <button id="emptyResetBtn" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
-                重置搜索
-            </button>
+
+        <!-- 最后更新时间 -->
+        <div class="mt-4 text-center text-sm text-gray-500">
+            数据更新时间: <span id="lastUpdateTime">-</span>
         </div>
     </main>
 
-    <!-- 底部信息区 -->
-    <footer class="bg-white border-t border-gray-200 py-4">
-        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
-            <p>© 2026 辅料管理看板 | 领料班专用系统</p>
-            <p class="mt-1 text-xs">数据更新时间：<span id="lastUpdateTime"></span></p>
-        </div>
-    </footer>
-
     <!-- 新增/编辑物料弹窗 -->
     <div id="materialModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="px-6 py-4 border-b border-gray-200">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">新增辅料</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
             </div>
             <div class="px-6 py-4">
                 <form id="materialForm">
-                    <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- 物料编码 -->
                         <div>
                             <label for="materialCode" class="block text-sm font-medium text-gray-700 mb-1">物料编码 <span class="text-red-500">*</span></label>
-                            <input type="text" id="materialCode" name="code" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料编码" required="">
+                            <input type="text" id="materialCode" name="materialCode" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料编码" required>
                         </div>
                         
                         <!-- 物料名称 -->
                         <div>
                             <label for="materialName" class="block text-sm font-medium text-gray-700 mb-1">物料名称 <span class="text-red-500">*</span></label>
-                            <input type="text" id="materialName" name="name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料名称" required="">
+                            <input type="text" id="materialName" name="materialName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料名称" required>
                         </div>
                         
                         <!-- 物料规格 -->
                         <div>
                             <label for="materialSpec" class="block text-sm font-medium text-gray-700 mb-1">物料规格 <span class="text-red-500">*</span></label>
-                            <input type="text" id="materialSpec" name="spec" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料规格" required="">
-                        </div>
-                        
-                        <!-- 现有数量 -->
-                        <div>
-                            <label for="materialQuantity" class="block text-sm font-medium text-gray-700 mb-1">现有数量 <span class="text-red-500">*</span></label>
-                            <input type="number" id="materialQuantity" name="quantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入现有数量" min="0" step="0.01" required="">
+                            <input type="text" id="materialSpec" name="materialSpec" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料规格" required>
                         </div>
                         
                         <!-- 单位 -->
                         <div>
                             <label for="materialUnit" class="block text-sm font-medium text-gray-700 mb-1">单位 <span class="text-red-500">*</span></label>
-                            <input type="text" id="materialUnit" name="unit" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入单位" required="">
+                            <input type="text" id="materialUnit" name="materialUnit" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入单位" required>
                         </div>
                         
-
-                        
-                        <!-- 货架库位 -->
+                        <!-- 现有数量 -->
                         <div>
-                            <label for="materialLocation" class="block text-sm font-medium text-gray-700 mb-1">货架库位</label>
-                            <input type="text" id="materialLocation" name="location" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入货架库位（如：第1排货架1号位）">
+                            <label for="materialQuantity" class="block text-sm font-medium text-gray-700 mb-1">现有数量</label>
+                            <input type="number" id="materialQuantity" name="materialQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入现有数量" min="0" step="0.01">
                         </div>
                         
                         <!-- 预警值 -->
                         <div>
-                            <label for="materialWarning" class="block text-sm font-medium text-gray-700 mb-1">预警值</label>
-                            <input type="number" id="materialWarning" name="warningValue" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入预警值" min="0" step="0.01">
+                            <label for="warningValue" class="block text-sm font-medium text-gray-700 mb-1">预警值</label>
+                            <input type="number" id="warningValue" name="warningValue" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入预警值" min="0" step="0.01">
                         </div>
+                        
+                        <!-- 分类 -->
+                        <div>
+                            <label for="materialCategory" class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                            <input type="text" id="materialCategory" name="materialCategory" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入分类">
+                        </div>
+                        
+                        <!-- 货架库位 -->
+                        <div>
+                            <label for="materialLocation" class="block text-sm font-medium text-gray-700 mb-1">货架库位</label>
+                            <input type="text" id="materialLocation" name="materialLocation" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入货架库位">
+                        </div>
+                    </div>
+                    
+                    <!-- 备注 -->
+                    <div class="mt-4">
+                        <label for="materialRemark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                        <textarea id="materialRemark" name="materialRemark" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入备注信息"></textarea>
                     </div>
                 </form>
             </div>
             <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
+                <button id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
                     取消
                 </button>
-                <button id="confirmBtn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                    确定
+                <button id="confirmBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    确认
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 登录模态框 -->
+    <!-- 登录弹窗 -->
     <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -299,22 +308,25 @@
                     <button id="loginTab" class="px-3 py-1 rounded-md bg-blue-100 text-blue-700 font-medium">登录</button>
                     <button id="registerTab" class="px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100">注册</button>
                     <button id="changePasswordTab" class="px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100">修改密码</button>
+                    <button id="closeLoginModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa fa-times"></i>
+                    </button>
                 </div>
             </div>
             <div class="px-6 py-4">
                 <!-- 登录表单 -->
-                <form id="loginForm" class="block">
+                <form id="loginForm">
                     <div class="space-y-4">
                         <!-- 用户名 -->
                         <div>
                             <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
-                            <input type="text" id="username" name="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required="">
+                            <input type="text" id="username" name="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
                         </div>
                         
                         <!-- 密码 -->
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="password" name="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required="">
+                            <input type="password" id="password" name="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
                         </div>
                     </div>
                 </form>
@@ -325,19 +337,19 @@
                         <!-- 用户名 -->
                         <div>
                             <label for="registerUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
-                            <input type="text" id="registerUsername" name="registerUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required="">
+                            <input type="text" id="registerUsername" name="registerUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
                         </div>
                         
                         <!-- 密码 -->
                         <div>
                             <label for="registerPassword" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="registerPassword" name="registerPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required="">
+                            <input type="password" id="registerPassword" name="registerPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
                         </div>
                         
                         <!-- 确认密码 -->
                         <div>
                             <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">确认密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="confirmPassword" name="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请再次输入密码" required="">
+                            <input type="password" id="confirmPassword" name="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请再次输入密码" required>
                         </div>
                     </div>
                 </form>
@@ -347,87 +359,177 @@
                     <div class="space-y-4">
                         <!-- 用户名 -->
                         <div>
-                            <label for="changePasswordUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
-                            <input type="text" id="changePasswordUsername" name="changePasswordUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required="">
-                        </div>
-                        
-                        <!-- 原始密码 -->
-                        <div>
-                            <label for="oldPassword" class="block text-sm font-medium text-gray-700 mb-1">原始密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="oldPassword" name="oldPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入原始密码" required="">
+                            <label for="changeUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="changeUsername" name="changeUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
                         </div>
                         
                         <!-- 新密码 -->
                         <div>
                             <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">新密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="newPassword" name="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入新密码" required="">
-                        </div>
-                        
-                        <!-- 确认新密码 -->
-                        <div>
-                            <label for="confirmNewPassword" class="block text-sm font-medium text-gray-700 mb-1">确认新密码 <span class="text-red-500">*</span></label>
-                            <input type="password" id="confirmNewPassword" name="confirmNewPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请再次输入新密码" required="">
+                            <input type="password" id="newPassword" name="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入新密码" required>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button id="cancelLoginBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
+                <button id="cancelLoginBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
                     取消
                 </button>
-                <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
                     登录
                 </button>
-                <button id="registerBtn" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 hidden">
+                <button id="registerBtn" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-all duration-300 hidden">
                     注册
                 </button>
-                <button id="changePasswordBtn" class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 hidden">
+                <button id="changePasswordBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-all duration-300 hidden">
                     修改密码
                 </button>
             </div>
         </div>
     </div>
-    
-    <!-- 用户管理模态框 -->
+
+    <!-- 用户管理弹窗 -->
     <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
                 <button id="closeUserManagementModal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fa fa-times"></i>
+                    <i class="fa fa-times text-xl"></i>
                 </button>
             </div>
             <div class="px-6 py-4">
+                <!-- 新增用户按钮 -->
+                <button id="addUserBtn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300 flex items-center">
+                    <i class="fa fa-plus mr-2"></i>新增用户
+                </button>
+                
+                <!-- 用户列表 -->
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    用户名
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    角色
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    操作
-                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">姓名</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">角色</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">部门</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                             </tr>
                         </thead>
                         <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
-                            <!-- 用户数据将通过JavaScript动态填充 -->
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
-                <button id="closeUserManagementBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
-                    关闭
+        </div>
+    </div>
+
+    <!-- 新增/编辑用户弹窗 -->
+    <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="userModalTitle">新增用户</h3>
+                <button id="closeUserModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <form id="userForm">
+                    <div class="space-y-4">
+                        <!-- 用户名 -->
+                        <div>
+                            <label for="userUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="userUsername" name="userUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div>
+                            <label for="userPassword" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
+                            <input type="password" id="userPassword" name="userPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
+                        </div>
+                        
+                        <!-- 姓名 -->
+                        <div>
+                            <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+                            <input type="text" id="userName" name="userName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入姓名">
+                        </div>
+                        
+                        <!-- 角色 -->
+                        <div>
+                            <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">角色</label>
+                            <select id="userRole" name="userRole" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="employee">普通员工</option>
+                                <option value="admin">管理员</option>
+                                <option value="super_admin">超级管理员</option>
+                            </select>
+                        </div>
+                        
+                        <!-- 部门 -->
+                        <div>
+                            <label for="userDepartment" class="block text-sm font-medium text-gray-700 mb-1">部门</label>
+                            <input type="text" id="userDepartment" name="userDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入部门">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelUserBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="confirmUserBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    确认
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- 导出选项弹窗 -->
+    <div id="exportOptionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">导出Excel</h3>
+                <button id="closeExportModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <div class="space-y-4">
+                    <!-- 导出类型 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">选择导出内容</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="all" checked class="mr-2">
+                                <span>全部物料</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="warning" class="mr-2">
+                                <span>库存预警物料</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="shortage" class="mr-2">
+                                <span>库存不足物料</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelExportBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="confirmExportBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    导出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 transform transition-all duration-300 opacity-0 translate-y-4">
+        <span id="toastMessage"></span>
+    </div>
+
     <!-- JavaScript -->
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
