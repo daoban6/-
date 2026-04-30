@@ -1160,8 +1160,11 @@ async function loadUsers() {
     try {
         const result = await API.User.getAll();
         users = result.data || [];
+        console.log('加载用户列表成功，用户数量:', users.length);
+        console.log('用户数据:', users);
         updateUserTable();
     } catch (error) {
+        console.error('加载用户列表错误:', error);
         showToast('加载用户列表失败：' + error.message, 'error');
     }
 }
@@ -1332,7 +1335,9 @@ async function saveUser() {
             if (!data.name || data.name.trim() === '') {
                 data.name = data.username;
             }
-            await API.User.create(data);
+            console.log('新增用户数据:', data);
+            const result = await API.User.create(data);
+            console.log('新增用户结果:', result);
             showToast('用户新增成功', 'success');
         }
         
