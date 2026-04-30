@@ -890,8 +890,9 @@ function bindRegisterEvents() {
         cancelLoginBtn.addEventListener('click', closeLoginModal);
     }
     
-    if (closeLoginModal) {
-        closeLoginModal.addEventListener('click', closeLoginModal);
+    const closeLoginModalBtn = document.getElementById('closeLoginModal');
+    if (closeLoginModalBtn) {
+        closeLoginModalBtn.addEventListener('click', closeLoginModal);
     }
     
     if (loginButton) {
@@ -1049,16 +1050,17 @@ async function handleRegister() {
 // 处理修改密码
 async function handleChangePassword() {
     const username = document.getElementById('changeUsername').value.trim();
+    const oldPassword = document.getElementById('oldPassword').value.trim();
     const newPassword = document.getElementById('newPassword').value.trim();
     
-    if (!username || !newPassword) {
-        showToast('请输入用户名和新密码', 'error');
+    if (!username || !oldPassword || !newPassword) {
+        showToast('请输入用户名、旧密码和新密码', 'error');
         return;
     }
     
     try {
-        // 先登录验证身份
-        const loginResult = await API.login(username, newPassword);
+        // 先使用旧密码登录验证身份
+        const loginResult = await API.login(username, oldPassword);
         if (loginResult.success) {
             // 更新密码
             await API.User.changePassword(loginResult.user.id, { newPassword: newPassword });
@@ -1096,7 +1098,19 @@ function enableEditButtons() {
     // 启用新增辅料按钮
     addMaterialBtn.disabled = false;
     
-    // 根据权限隐藏用户管理按钮
+    // 启用导入Excel按钮
+    importExcelBtn.disabled = false;
+    
+    // 启用快速更新库存按钮
+    const quickImportBtn = document.getElementById('quickImportBtn');
+    if (quickImportBtn) {
+        quickImportBtn.disabled = false;
+    }
+    
+    // 启用导出Excel按钮
+    exportExcelBtn.disabled = false;
+    
+    // 根据权限显示用户管理按钮
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin')) {
         document.getElementById('userManagementBtn').style.display = 'flex';
     }
@@ -1111,6 +1125,18 @@ function disableEditButtons() {
     
     // 禁用新增辅料按钮
     addMaterialBtn.disabled = true;
+    
+    // 禁用导入Excel按钮
+    importExcelBtn.disabled = true;
+    
+    // 禁用快速更新库存按钮
+    const quickImportBtn = document.getElementById('quickImportBtn');
+    if (quickImportBtn) {
+        quickImportBtn.disabled = true;
+    }
+    
+    // 禁用导出Excel按钮
+    exportExcelBtn.disabled = true;
     
     // 隐藏用户管理按钮
     document.getElementById('userManagementBtn').style.display = 'none';
