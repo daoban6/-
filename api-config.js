@@ -282,17 +282,31 @@ const MaterialAPI = {
       throw new Error('Excel文件中没有数据');
     }
 
-    const materials = data.map((item, index) => ({
-      code: item['物料编码'] || item['code'] || item['物料编号'] || `TEMP_${Date.now()}_${index}`,
-      name: item['物料名称'] || item['name'] || '',
-      spec: item['物料规格'] || item['spec'] || item['规格'] || '',
-      quantity: parseFloat(item['现有数量'] || item['quantity'] || item['数量'] || 0),
-      unit: item['单位'] || item['unit'] || '',
-      location: item['货架库位'] || item['location'] || item['库位'] || '',
-      warning_value: parseFloat(item['预警值'] || item['warning_value'] || item['最低库存'] || 0),
-      category: item['类别'] || item['category'] || '',
-      remark: item['备注'] || item['remark'] || ''
-    })).filter(m => m.name && m.code);
+    const materials = data.map((item, index) => {
+      // 尝试多种可能的字段名映射
+      const code = item['物料编码'] || item['code'] || item['物料编号'] || item['编码'] || `TEMP_${Date.now()}_${index}`;
+      const name = item['物料名称'] || item['name'] || item['名称'] || '';
+      const spec = item['物料规格'] || item['spec'] || item['规格'] || item['型号'] || '';
+      const quantity = parseFloat(item['现有数量'] || item['quantity'] || item['数量'] || item['库存'] || 0);
+      const unit = item['单位'] || item['unit'] || '';
+      const location = item['货架库位'] || item['location'] || item['库位'] || item['库位号'] || '';
+      // 尝试多种预警值字段名
+      const warningValue = parseFloat(item['预警值'] || item['warning_value'] || item['最低库存'] || item['预警'] || item['安全库存'] || 0);
+      const category = item['类别'] || item['category'] || item['分类'] || '';
+      const remark = item['备注'] || item['remark'] || item['说明'] || '';
+      
+      return {
+        code,
+        name,
+        spec,
+        quantity,
+        unit,
+        location,
+        warning_value: warningValue,
+        category,
+        remark
+      };
+    }).filter(m => m.name && m.code);
 
     if (materials.length === 0) {
       throw new Error('没有有效的物料数据');

@@ -1283,6 +1283,7 @@ function openUserModal(user = null) {
     } else {
         title.textContent = '新增用户';
         form.reset();
+        document.getElementById('userUsername').value = '';
         document.getElementById('userUsername').disabled = false;
         document.getElementById('userPassword').required = true;
     }
@@ -1327,6 +1328,10 @@ async function saveUser() {
                 showToast('用户更新成功', 'success');
             }
         } else {
+            // 新增用户时，如果姓名为空，使用用户名作为姓名
+            if (!data.name || data.name.trim() === '') {
+                data.name = data.username;
+            }
             await API.User.create(data);
             showToast('用户新增成功', 'success');
         }
