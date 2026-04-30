@@ -1894,11 +1894,43 @@
                 currentUserElement.textContent = currentUser.username;
                 loginBtn.style.display = 'none';
                 logoutBtn.style.display = 'block';
+                enableEditButtons();
             } else {
                 currentUserElement.textContent = '未登录';
                 loginBtn.style.display = 'block';
                 logoutBtn.style.display = 'none';
+                disableEditButtons();
             }
+        }
+        
+        // 启用编辑按钮
+        function enableEditButtons() {
+            // 启用新增领退料记录按钮
+            const addRecordBtn = document.getElementById('addRecordBtn');
+            if (addRecordBtn) addRecordBtn.disabled = false;
+            
+            // 启用导出领用记录按钮
+            const exportUsageBtn = document.getElementById('exportUsageBtn');
+            if (exportUsageBtn) exportUsageBtn.disabled = false;
+            
+            // 启用使用量统计分析按钮
+            const usageStatsBtn = document.getElementById('usageStatsBtn');
+            if (usageStatsBtn) usageStatsBtn.disabled = false;
+        }
+        
+        // 禁用编辑按钮
+        function disableEditButtons() {
+            // 禁用新增领退料记录按钮
+            const addRecordBtn = document.getElementById('addRecordBtn');
+            if (addRecordBtn) addRecordBtn.disabled = true;
+            
+            // 禁用导出领用记录按钮
+            const exportUsageBtn = document.getElementById('exportUsageBtn');
+            if (exportUsageBtn) exportUsageBtn.disabled = true;
+            
+            // 禁用使用量统计分析按钮
+            const usageStatsBtn = document.getElementById('usageStatsBtn');
+            if (usageStatsBtn) usageStatsBtn.disabled = true;
         }
 
         // 打开登录模态框
@@ -1934,7 +1966,7 @@
             const password = passwordInput.value.trim();
             
             try {
-                const result = await API.User.login(username, password);
+                const result = await API.login(username, password);
                 isLoggedIn = true;
                 currentUser = result.user;
                 closeLoginModal();
@@ -1956,7 +1988,7 @@
 
         // 处理登出
         function handleLogout() {
-            API.User.logout();
+            API.logout();
             isLoggedIn = false;
             currentUser = null;
             updateLoginStatusUI();
