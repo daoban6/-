@@ -245,7 +245,7 @@ const MaterialAPI = {
       .from('materials')
       .update({ 
         quantity: parseFloat(quantity),
-        status: calculateStatus(parseFloat(quantity), parseFloat(material.warningValue))
+        status: calculateStatus(parseFloat(quantity), parseFloat(material.warning_value))
       })
       .eq('id', id)
       .select()
@@ -415,7 +415,7 @@ const UsageAPI = {
       .from('materials')
       .update({
         quantity: newQuantity,
-        status: calculateStatus(newQuantity, parseFloat(material.warningValue))
+        status: calculateStatus(newQuantity, parseFloat(material.warning_value))
       })
       .eq('id', parseInt(data.materialId));
 
@@ -448,7 +448,7 @@ const UsageAPI = {
       .from('materials')
       .update({
         quantity: newQuantity,
-        status: calculateStatus(newQuantity, parseFloat(material.warningValue))
+        status: calculateStatus(newQuantity, parseFloat(material.warning_value))
       })
       .eq('id', record.material_id);
 
