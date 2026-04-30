@@ -109,7 +109,7 @@ const UserAPI = {
   getAll: async () => {
     const { data, error } = await supabase.from('users').select('*');
     if (error) throw error;
-    return { data };
+    return { data: Array.isArray(data) ? data : [] };
   },
   create: async (userData) => {
     const { data, error } = await supabase
@@ -261,6 +261,51 @@ const MaterialAPI = {
     const { data, error } = await query.order('code', { ascending: true });
     if (error) throw error;
     return data;
+  },
+  import: async (base64Data) => {
+    if (!base64Data) {
+      throw new Error('请上传Excel文件');
+    }
+
+    const binaryString = atob(base64Data);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const workbook = XLSX.read(bytes, { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(worksheet);
+
+    if (!data || data.length === 0) {
+      throw new Error('Excel文件中没有数据');
+    }
+
+    const materials = data.map((item, index) => ({
+      code: item['物料编码'] || item['code'] || item['物料编号'] || `TEMP_${Date.now()}_${index}`,
+      name: item['物料名称'] || item['name'] || '',
+      spec: item['物料规格'] || item['spec'] || item['规格'] || '',
+      quantity: parseFloat(item['现有数量'] || item['quantity'] || item['数量'] || 0),
+      unit: item['单位'] || item['unit'] || '',
+      location: item['货架库位'] || item['location'] || item['库位'] || '',
+      warning_value: parseFloat(item['预警值'] || item['warning_value'] || item['最低库存'] || 0),
+      category: item['类别'] || item['category'] || '',
+      remark: item['备注'] || item['remark'] || ''
+    })).filter(m => m.name && m.code);
+
+    if (materials.length === 0) {
+      throw new Error('没有有效的物料数据');
+    }
+
+    const { data: inserted, error } = await supabase
+      .from('materials')
+      .insert(materials)
+      .select();
+
+    if (error) throw error;
+
+    return { success: true, count: inserted.length, data: inserted };
   }
 };
 
@@ -412,6 +457,23 @@ const UsageAPI = {
     if (error) throw error;
 
     return { success: true };
+  },
+  export: async (params = {}) => {
+    let query = supabase.from('usage_records').select('*');
+    
+    if (params.recordType) {
+      query = query.eq('record_type', params.recordType);
+    }
+    if (params.dateStart) {
+      query = query.gte('date', params.dateStart);
+    }
+    if (params.dateEnd) {
+      query = query.lte('date', params.dateEnd);
+    }
+    
+    const { data, error } = await query.order('date', { ascending: false });
+    if (error) throw error;
+    return data;
   }
 };
 
