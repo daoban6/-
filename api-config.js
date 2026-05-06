@@ -1,14 +1,5 @@
-// API配置文件 - 直接连接Supabase
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/+esm';
-
-// Supabase配置
-const SUPABASE_URL = 'https://vuvchznwbjycszerhkre.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_VAahD_wXv8EHQZKu_Jit9A_guZ6066w';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// JWT密钥（用于本地token验证）
-const JWT_SECRET = 'my-secret-key-12345';
+// API配置文件 - 通过后端API访问数据
+const API_BASE_URL = '/api';
 
 // 获取token
 function getToken() {
@@ -46,55 +37,45 @@ function isLoggedIn() {
   return !!getToken();
 }
 
-// 登录
+// 构建请求头
+function getHeaders() {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// 登录 - 调用后端API进行验证
 async function login(username, password) {
   try {
-    // 在数据库中查找用户
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
-
-    if (error || !user) {
-      throw new Error('用户名或密码错误');
-    }
-
-    // 验证密码（比较数据库中的密码）
-    if (password !== user.password) {
-      throw new Error('用户名或密码错误');
-    }
-
-    // 生成JWT token
-    const token = generateToken(user.id);
-    setToken(token);
-    setCurrentUser({
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      department: user.department
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ username, password })
     });
 
-    return { success: true, user: getCurrentUser(), token };
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || '登录失败');
+    }
+
+    setToken(result.token);
+    setCurrentUser({
+      id: result.user.id,
+      username: result.user.username,
+      name: result.user.name || result.user.username,
+      role: result.user.role,
+      department: result.user.department
+    });
+
+    return { success: true, user: getCurrentUser(), token: result.token };
   } catch (error) {
     throw new Error(error.message);
-  }
-}
-
-// 生成JWT token
-function generateToken(userId) {
-  const payload = { userId, exp: Date.now() + 24 * 60 * 60 * 1000 };
-  return btoa(JSON.stringify(payload));
-}
-
-// 验证token
-function verifyToken(token) {
-  try {
-    const payload = JSON.parse(atob(token));
-    return payload.userId;
-  } catch {
-    return null;
   }
 }
 
@@ -107,411 +88,248 @@ function logout() {
 // 用户管理API
 const UserAPI = {
   getAll: async () => {
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) throw error;
-    return { data: Array.isArray(data) ? data : [] };
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '获取用户列表失败');
+    }
+    return { data: Array.isArray(result) ? result : [] };
   },
   create: async (userData) => {
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        username: userData.username,
-        password: userData.password,
-        name: userData.name,
-        role: userData.role || 'employee',
-        department: userData.department
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    return { data };
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userData)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '创建用户失败');
+    }
+    return { data: result };
   },
   update: async (id, userData) => {
-    const { data, error } = await supabase
-      .from('users')
-      .update({
-        name: userData.name,
-        role: userData.role,
-        department: userData.department
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return { data };
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(userData)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '更新用户失败');
+    }
+    return { data: result };
   },
   delete: async (id) => {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) throw error;
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '删除用户失败');
+    }
     return { success: true };
   },
   changePassword: async (id, passwordData) => {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ password: passwordData.newPassword })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return { data };
+    const response = await fetch(`${API_BASE_URL}/users/${id}/password`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(passwordData)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '修改密码失败');
+    }
+    return { data: result };
   }
 };
 
 // 物料管理API
 const MaterialAPI = {
   getAll: async (params = {}) => {
-    let query = supabase.from('materials').select('*', { count: 'exact' });
-    
-    if (params.status) {
-      query = query.eq('status', params.status);
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/materials?${queryString}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '获取物料列表失败');
     }
-    if (params.search) {
-      query = query.or(`code.ilike.%${params.search}%,name.ilike.%${params.search}%,spec.ilike.%${params.search}%`);
-    }
-    if (params.category) {
-      query = query.eq('category', params.category);
-    }
-    
-    const page = parseInt(params.page) || 1;
-    const limit = parseInt(params.limit) || 10;
-    
-    const { data, count, error } = await query
-      .order('code', { ascending: true })
-      .range((page - 1) * limit, page * limit - 1);
-    
-    if (error) throw error;
-    return { data, total: count, page, limit };
+    return result;
   },
   get: async (id) => {
-    const { data, error } = await supabase.from('materials').select('*').eq('id', id).single();
-    if (error) throw error;
-    return data;
+    const response = await fetch(`${API_BASE_URL}/materials/${id}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '获取物料失败');
+    }
+    return result;
   },
   create: async (data) => {
-    const { data: result, error } = await supabase
-      .from('materials')
-      .insert({
-        code: data.code,
-        name: data.name,
-        spec: data.spec,
-        unit: data.unit,
-        quantity: parseFloat(data.quantity) || 0,
-        warning_value: parseFloat(data.warning_value) || 0,
-        status: 'normal',
-        category: data.category,
-        location: data.location,
-        remark: data.remark
-      })
-      .select()
-      .single();
-    if (error) throw error;
+    const response = await fetch(`${API_BASE_URL}/materials`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '创建物料失败');
+    }
     return result;
   },
   update: async (id, data) => {
-    const { data: result, error } = await supabase
-      .from('materials')
-      .update({
-        name: data.name,
-        spec: data.spec,
-        unit: data.unit,
-        warning_value: parseFloat(data.warning_value) || 0,
-        category: data.category,
-        location: data.location,
-        remark: data.remark,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
+    const response = await fetch(`${API_BASE_URL}/materials/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '更新物料失败');
+    }
     return result;
   },
   delete: async (id) => {
-    const { error } = await supabase.from('materials').delete().eq('id', id);
-    if (error) throw error;
+    const response = await fetch(`${API_BASE_URL}/materials/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '删除物料失败');
+    }
     return { success: true };
   },
   updateQuantity: async (id, quantity) => {
-    // 获取物料信息
-    const { data: material, error: getError } = await supabase
-      .from('materials')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (getError) throw getError;
-    
-    const { data: result, error } = await supabase
-      .from('materials')
-      .update({ 
-        quantity: parseFloat(quantity),
-        status: calculateStatus(parseFloat(quantity), parseFloat(material.warning_value))
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
+    const response = await fetch(`${API_BASE_URL}/materials/${id}/quantity`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ quantity })
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '更新库存失败');
+    }
     return result;
   },
   export: async (status) => {
-    let query = supabase.from('materials').select('*');
-    if (status) {
-      query = query.eq('status', status);
+    const response = await fetch(`${API_BASE_URL}/materials/export${status ? `?status=${status}` : ''}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || '导出失败');
     }
-    const { data, error } = await query.order('code', { ascending: true });
-    if (error) throw error;
-    return data;
+    return response.blob();
   },
   import: async (base64Data) => {
-    if (!base64Data) {
-      throw new Error('请上传Excel文件');
+    const response = await fetch(`${API_BASE_URL}/materials/import`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ base64Data })
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '导入失败');
     }
-
-    const binaryString = atob(base64Data);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const workbook = XLSX.read(bytes, { type: 'array' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-
-    if (!data || data.length === 0) {
-      throw new Error('Excel文件中没有数据');
-    }
-
-    const materials = data.map((item, index) => {
-      // 尝试多种可能的字段名映射
-      const code = item['物料编码'] || item['code'] || item['物料编号'] || item['编码'] || `TEMP_${Date.now()}_${index}`;
-      const name = item['物料名称'] || item['name'] || item['名称'] || '';
-      const spec = item['物料规格'] || item['spec'] || item['规格'] || item['型号'] || '';
-      const quantity = parseFloat(item['现有数量'] || item['quantity'] || item['数量'] || item['库存'] || 0);
-      const unit = item['单位'] || item['unit'] || '';
-      const location = item['货架库位'] || item['location'] || item['库位'] || item['库位号'] || '';
-      // 尝试多种预警值字段名
-      const warningValue = parseFloat(item['预警值'] || item['warning_value'] || item['最低库存'] || item['预警'] || item['安全库存'] || 0);
-      const category = item['类别'] || item['category'] || item['分类'] || '';
-      const remark = item['备注'] || item['remark'] || item['说明'] || '';
-      
-      return {
-        code,
-        name,
-        spec,
-        quantity,
-        unit,
-        location,
-        warning_value: warningValue,
-        category,
-        remark
-      };
-    }).filter(m => m.name && m.code);
-
-    if (materials.length === 0) {
-      throw new Error('没有有效的物料数据');
-    }
-
-    const { data: inserted, error } = await supabase
-      .from('materials')
-      .insert(materials)
-      .select();
-
-    if (error) throw error;
-
-    return { success: true, count: inserted.length, data: inserted };
+    return result;
   }
 };
-
-// 计算库存状态
-function calculateStatus(quantity, warningValue) {
-  if (quantity <= 0) return 'shortage';
-  if (quantity < warningValue) return 'warning';
-  return 'normal';
-}
 
 // 领用记录API
 const UsageAPI = {
   getAll: async (params = {}) => {
-    let query = supabase.from('usage_records').select('*', { count: 'exact' });
-    
-    if (params.contractNumber) {
-      query = query.ilike('contract_number', `%${params.contractNumber}%`);
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/usage?${queryString}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '获取领用记录失败');
     }
-    if (params.projectName) {
-      query = query.ilike('project_name', `%${params.projectName}%`);
-    }
-    if (params.dateStart) {
-      query = query.gte('date', params.dateStart);
-    }
-    if (params.dateEnd) {
-      query = query.lte('date', params.dateEnd);
-    }
-    
-    const page = parseInt(params.page) || 1;
-    const limit = parseInt(params.limit) || 10;
-    
-    const { data, count, error } = await query
-      .order('date', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
-    
-    if (error) throw error;
-    return { data, total: count, page, limit };
+    return result;
   },
   getStats: async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const { count: todayCount } = await supabase
-      .from('usage_records')
-      .select('id', { count: 'exact' })
-      .gte('date', today);
-
-    const { count: weekCount } = await supabase
-      .from('usage_records')
-      .select('id', { count: 'exact' })
-      .gte('date', weekAgo);
-
-    const { count: monthCount } = await supabase
-      .from('usage_records')
-      .select('id', { count: 'exact' })
-      .gte('date', monthAgo);
-
-    const { count: totalCount } = await supabase
-      .from('usage_records')
-      .select('id', { count: 'exact' });
-
-    return {
-      today: todayCount || 0,
-      week: weekCount || 0,
-      month: monthCount || 0,
-      total: totalCount || 0
-    };
+    const response = await fetch(`${API_BASE_URL}/usage/stats`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '获取统计数据失败');
+    }
+    return result;
   },
   create: async (data) => {
-    // 创建领用记录
-    const { data: record, error } = await supabase
-      .from('usage_records')
-      .insert({
-        record_type: data.recordType,
-        contract_number: data.contractNumber,
-        project_name: data.projectName,
-        material_id: parseInt(data.materialId),
-        material_code: data.materialCode,
-        material_name: data.materialName,
-        material_spec: data.materialSpec,
-        material_unit: data.materialUnit,
-        quantity: parseFloat(data.quantity),
-        user_name: data.userName,
-        date: data.date,
-        remark: data.remark || ''
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // 更新物料库存
-    const { data: material, error: materialError } = await supabase
-      .from('materials')
-      .select('*')
-      .eq('id', parseInt(data.materialId))
-      .single();
-
-    if (materialError) throw materialError;
-
-    const newQuantity = data.recordType === 'usage' 
-      ? parseFloat(material.quantity) - parseFloat(data.quantity)
-      : parseFloat(material.quantity) + parseFloat(data.quantity);
-
-    await supabase
-      .from('materials')
-      .update({
-        quantity: newQuantity,
-        status: calculateStatus(newQuantity, parseFloat(material.warning_value))
-      })
-      .eq('id', parseInt(data.materialId));
-
-    return record;
+    const response = await fetch(`${API_BASE_URL}/usage`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '创建领用记录失败');
+    }
+    return result;
+  },
+  update: async (id, data) => {
+    const response = await fetch(`${API_BASE_URL}/usage/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '更新领用记录失败');
+    }
+    return result;
   },
   delete: async (id) => {
-    // 获取原记录
-    const { data: record, error: fetchError } = await supabase
-      .from('usage_records')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    // 恢复物料库存
-    const { data: material, error: materialError } = await supabase
-      .from('materials')
-      .select('*')
-      .eq('id', record.material_id)
-      .single();
-
-    if (materialError) throw materialError;
-
-    const newQuantity = record.record_type === 'usage'
-      ? parseFloat(material.quantity) + parseFloat(record.quantity)
-      : parseFloat(material.quantity) - parseFloat(record.quantity);
-
-    await supabase
-      .from('materials')
-      .update({
-        quantity: newQuantity,
-        status: calculateStatus(newQuantity, parseFloat(material.warning_value))
-      })
-      .eq('id', record.material_id);
-
-    // 删除记录
-    const { error } = await supabase.from('usage_records').delete().eq('id', id);
-    if (error) throw error;
-
+    const response = await fetch(`${API_BASE_URL}/usage/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '删除领用记录失败');
+    }
     return { success: true };
   },
   export: async (params = {}) => {
-    let query = supabase.from('usage_records').select('*');
-    
-    if (params.recordType) {
-      query = query.eq('record_type', params.recordType);
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/usage/export?${queryString}`, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || '导出失败');
     }
-    if (params.dateStart) {
-      query = query.gte('date', params.dateStart);
-    }
-    if (params.dateEnd) {
-      query = query.lte('date', params.dateEnd);
-    }
-    
-    const { data, error } = await query.order('date', { ascending: false });
-    if (error) throw error;
-    return data;
+    return response.blob();
   }
 };
 
-// 健康检查
-async function healthCheck() {
-  try {
-    const { data, error } = await supabase.from('users').select('id').limit(1);
-    if (error) throw error;
-    return { status: 'ok' };
-  } catch {
-    return { status: 'error' };
-  }
-}
-
-// 导出API
+// 导出API对象
 const API = {
   login,
   logout,
+  isLoggedIn,
+  getToken,
+  setToken,
+  getCurrentUser,
+  setCurrentUser,
   User: UserAPI,
   Material: MaterialAPI,
-  Usage: UsageAPI,
-  healthCheck,
-  isLoggedIn,
-  getCurrentUser
+  Usage: UsageAPI
 };
 
 export default API;

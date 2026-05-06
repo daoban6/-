@@ -747,6 +747,20 @@ function showExportOptionsModal() {
 
 // 下载文件
 function downloadFile(data, filename) {
+    // 如果是 Blob 对象，直接下载
+    if (data instanceof Blob) {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        return;
+    }
+    
+    // 如果是数据数组，转换为 Excel
     if (!data || data.length === 0) {
         showToast('没有数据可导出', 'warning');
         return;

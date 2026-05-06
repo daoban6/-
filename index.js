@@ -92,7 +92,9 @@ app.post('/api/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
+        name: user.name,
         role: user.role,
+        department: user.department,
         createdAt: user.created_at
       }
     });
@@ -116,7 +118,7 @@ app.get('/api/users', authenticateToken, requireSuperAdmin, async (req, res) => 
   try {
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, username, role, created_at')
+      .select('id, username, name, role, department, created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -129,7 +131,7 @@ app.get('/api/users', authenticateToken, requireSuperAdmin, async (req, res) => 
 // 用户管理 - 创建新用户（仅管理员）
 app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { username, password, role = 'user' } = req.body;
+    const { username, password, role = 'user', name, department } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: '用户名和密码不能为空' });
@@ -155,7 +157,7 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert({ username, password: hashedPassword, role })
+      .insert({ username, password: hashedPassword, role, name: name || username, department: department || '' })
       .select()
       .single();
 
@@ -164,7 +166,9 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     res.status(201).json({
       id: newUser.id,
       username: newUser.username,
+      name: newUser.name,
       role: newUser.role,
+      department: newUser.department,
       createdAt: newUser.created_at
     });
   } catch (error) {
@@ -172,19 +176,30 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// 用户管理 - 更新用户角色（仅超级管理员）
+// 用户管理 - 更新用户（仅超级管理员）
 app.put('/api/users/:id', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
+    const { role, name, department } = req.body;
 
-    if (!['user', 'admin', 'super_admin'].includes(role)) {
-      return res.status(400).json({ error: '无效的角色' });
+    const updateData = {};
+    if (role && ['user', 'admin', 'super_admin'].includes(role)) {
+      updateData.role = role;
+    }
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (department !== undefined) {
+      updateData.department = department;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: '没有提供更新内容' });
     }
 
     const { data: user, error } = await supabase
       .from('users')
-      .update({ role })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -194,7 +209,9 @@ app.put('/api/users/:id', authenticateToken, requireSuperAdmin, async (req, res)
     res.json({
       id: user.id,
       username: user.username,
-      role: user.role
+      name: user.name,
+      role: user.role,
+      department: user.department
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
