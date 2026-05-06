@@ -137,7 +137,6 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: '用户名和密码不能为空' });
     }
 
-    // 检查用户名是否已存在
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
@@ -148,7 +147,6 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: '用户名已存在' });
     }
 
-    // 限制角色只能是 user 或 admin（超级管理员只能通过数据库创建）
     if (!['user', 'admin'].includes(role)) {
       return res.status(400).json({ error: '无效的角色' });
     }
@@ -223,7 +221,6 @@ app.delete('/api/users/:id', authenticateToken, requireSuperAdmin, async (req, r
   try {
     const { id } = req.params;
 
-    // 不能删除自己
     if (parseInt(id) === req.user.id) {
       return res.status(400).json({ error: '不能删除自己' });
     }
@@ -247,7 +244,6 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { oldPassword, newPassword } = req.body;
 
-    // 只有超级管理员可以修改其他用户密码，普通用户只能修改自己的
     if (parseInt(id) !== req.user.id && req.user.role !== 'super_admin') {
       return res.status(403).json({ error: '只能修改自己的密码' });
     }
@@ -260,7 +256,6 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
 
     if (fetchError) throw fetchError;
 
-    // 如果不是超级管理员，需要验证旧密码
     if (req.user.role !== 'super_admin') {
       const isValid = await bcrypt.compare(oldPassword, user.password);
       if (!isValid) {
@@ -340,7 +335,6 @@ app.post('/api/materials', authenticateToken, requireAdmin, async (req, res) => 
       return res.status(400).json({ error: '必填字段不能为空' });
     }
 
-    // 检查编码是否已存在
     const { data: existing } = await supabase
       .from('materials')
       .select('id')
@@ -479,7 +473,6 @@ app.post('/api/materials/import', authenticateToken, requireAdmin, async (req, r
       return res.status(400).json({ error: '没有有效的物料数据' });
     }
 
-    // 批量插入
     const { data: inserted, error } = await supabase
       .from('materials')
       .insert(materials)
@@ -578,25 +571,21 @@ app.get('/api/usage/stats', authenticateToken, async (req, res) => {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // 今日领用
     const { count: todayCount } = await supabase
       .from('usage_records')
       .select('id', { count: 'exact' })
       .gte('date', today);
 
-    // 本周领用
     const { count: weekCount } = await supabase
       .from('usage_records')
       .select('id', { count: 'exact' })
       .gte('date', weekAgo);
 
-    // 本月领用
     const { count: monthCount } = await supabase
       .from('usage_records')
       .select('id', { count: 'exact' })
       .gte('date', monthAgo);
 
-    // 总领用
     const { count: totalCount } = await supabase
       .from('usage_records')
       .select('id', { count: 'exact' });
@@ -621,7 +610,6 @@ app.post('/api/usage', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: '必填字段不能为空' });
     }
 
-    // 创建领用记录
     const { data: record, error: recordError } = await supabase
       .from('usage_records')
       .insert({
@@ -644,15 +632,12 @@ app.post('/api/usage', authenticateToken, requireAdmin, async (req, res) => {
 
     if (recordError) throw recordError;
 
-    // 更新物料库存
     if (recordType === 'usage') {
-      // 领料：减少库存
       await supabase.rpc('decrement_material_quantity', {
         material_id: parseInt(materialId),
         amount: parseFloat(quantity)
       });
     } else {
-      // 退料：增加库存
       await supabase.rpc('increment_material_quantity', {
         material_id: parseInt(materialId),
         amount: parseFloat(quantity)
@@ -671,7 +656,6 @@ app.put('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { recordType, contractNumber, projectName, materialId, materialCode, materialName, materialSpec, materialUnit, quantity, userName, date, remark } = req.body;
 
-    // 获取原记录
     const { data: oldRecord, error: fetchError } = await supabase
       .from('usage_records')
       .select('*')
@@ -680,7 +664,6 @@ app.put('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     if (fetchError) throw fetchError;
 
-    // 更新物料库存（先恢复原数量）
     if (oldRecord.record_type === 'usage') {
       await supabase.rpc('increment_material_quantity', {
         material_id: oldRecord.material_id,
@@ -693,7 +676,6 @@ app.put('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) => {
       });
     }
 
-    // 更新领用记录
     const { data: record, error } = await supabase
       .from('usage_records')
       .update({
@@ -717,7 +699,6 @@ app.put('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     if (error) throw error;
 
-    // 更新物料库存（应用新数量）
     if (recordType === 'usage') {
       await supabase.rpc('decrement_material_quantity', {
         material_id: parseInt(materialId),
@@ -741,7 +722,6 @@ app.delete('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) =
   try {
     const { id } = req.params;
 
-    // 获取原记录
     const { data: record, error: fetchError } = await supabase
       .from('usage_records')
       .select('*')
@@ -750,7 +730,6 @@ app.delete('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) =
 
     if (fetchError) throw fetchError;
 
-    // 恢复物料库存
     if (record.record_type === 'usage') {
       await supabase.rpc('increment_material_quantity', {
         material_id: record.material_id,
@@ -763,7 +742,6 @@ app.delete('/api/usage/:id', authenticateToken, requireAdmin, async (req, res) =
       });
     }
 
-    // 删除记录
     const { error } = await supabase
       .from('usage_records')
       .delete()
@@ -825,43 +803,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 初始化数据库（仅首次运行使用）
-app.post('/api/init', async (req, res) => {
-  try {
-    const { adminPassword } = req.body;
-    
-    if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
-      return res.status(403).json({ error: '无效的初始化密码' });
-    }
+// Vercel Serverless Functions 需要的导出
+module.exports = (req, res) => {
+  app(req, res);
+};
 
-    // 检查是否已初始化
-    const { count } = await supabase
-      .from('users')
-      .select('id', { count: 'exact' });
-
-    if (count > 0) {
-      return res.status(400).json({ error: '数据库已初始化' });
-    }
-
-    // 创建超级管理员
-    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'gh888888', 10);
-    
-    const { data: admin, error } = await supabase
-      .from('users')
-      .insert({
-        username: '吴子俊',
-        password: hashedPassword,
-        role: 'super_admin'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({ success: true, message: '数据库初始化成功', admin });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-module.exports = app;
+module.exports.default = (req, res) => {
+  app(req, res);
+};

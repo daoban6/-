@@ -18,22 +18,18 @@
       "use": "@vercel/static"
     },
     {
-      "src": "api-config.js",
+      "src": "assets/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/index.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/usage-tracking",
       "dest": "/usage-tracking.html"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
