@@ -1,0 +1,540 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>辅料管理看板 - 领料班专用</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- SheetJS for Excel handling -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航区 -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <!-- 页面标题 -->
+                <div class="mb-4 md:mb-0">
+                    <h1 class="text-2xl font-bold text-blue-600">辅料管理看板</h1>
+                    <div class="flex items-center mt-1">
+                        <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">领料班专用</span>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮组 -->
+                <div class="flex flex-wrap gap-2">
+                    <div class="relative">
+                        <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <button id="importExcelBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center w-full">
+                            <i class="fa fa-upload mr-1"></i>导入Excel
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="file" id="quickImportFileInput" accept=".xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <button id="quickImportBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center w-full">
+                            <i class="fa fa-bolt mr-1"></i>快速更新库存
+                        </button>
+                    </div>
+                    <button id="exportExcelBtn" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-download mr-1"></i>导出Excel
+                    </button>
+                    <button id="addMaterialBtn" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-plus mr-1"></i>新增辅料
+                    </button>
+                    <button id="usageTrackingBtn" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-history mr-1"></i>使用量管理
+                    </button>
+                    <button id="operationLogBtn" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-file-text-o mr-1"></i>操作日志
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        <!-- 登录按钮区域 -->
+        <div class="flex justify-end mb-4 space-x-4">
+            <button id="userManagementBtn" class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 transition-colors duration-200 flex items-center hidden">
+                <i class="fa fa-users mr-2"></i>
+                用户管理
+            </button>
+
+            <button id="loginStatusBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-colors duration-200 flex items-center">
+                <i class="fa fa-user-circle mr-2"></i>
+                <span id="loginStatusText">未登录</span>
+            </button>
+        </div>
+
+        <!-- 搜索区 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <!-- 物料编码搜索 -->
+                <div class="relative">
+                    <input type="text" id="codeSearch" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="物料编码">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-barcode text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 物料名称搜索 -->
+                <div class="relative">
+                    <input type="text" id="nameSearch" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="物料名称">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-tag text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 物料规格搜索 -->
+                <div class="relative">
+                    <input type="text" id="specSearch" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="物料规格">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa fa-list text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- 搜索按钮 -->
+                <div class="flex gap-2">
+                    <button id="searchBtn" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-search mr-2"></i>搜索
+                    </button>
+                    <button id="resetBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300 flex items-center justify-center">
+                        <i class="fa fa-refresh mr-2"></i>重置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片区 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- 辅料总数 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">辅料总数</p>
+                        <p id="totalCount" class="text-2xl font-bold text-blue-600">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-cubes text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 正常库存 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">正常库存</p>
+                        <p id="normalStockCount" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 库存预警 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">库存预警</p>
+                        <p id="warningStockCount" class="text-2xl font-bold text-yellow-600">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 库存不足 -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">库存不足</p>
+                        <p id="shortageStockCount" class="text-2xl font-bold text-red-600">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fa fa-times-circle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 物料表格区 -->
+        <div id="loading" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+        
+        <div id="materialTableContainer" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                <div id="tableWrapper" class="table-wrapper">
+                    <div class="table-scroll-container">
+                        <table class="min-w-full divide-y divide-gray-200" id="materialTable">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors sort-header resizeable-column" data-sort="code" style="position: relative;">
+                                        物料编码
+                                        <span class="ml-1 text-gray-400 sort-icon">↕</span>
+                                        <div class="col-resize-handle" data-column="0"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors sort-header resizeable-column" data-sort="name" style="position: relative;">
+                                        物料名称
+                                        <span class="ml-1 text-gray-400 sort-icon">↕</span>
+                                        <div class="col-resize-handle" data-column="1"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resizeable-column" style="position: relative;">
+                                        物料规格
+                                        <div class="col-resize-handle" data-column="2"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resizeable-column" style="position: relative;">
+                                        现有数量
+                                        <div class="col-resize-handle" data-column="3"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resizeable-column" style="position: relative;">
+                                        单位
+                                        <div class="col-resize-handle" data-column="4"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resizeable-column" style="position: relative;">
+                                        预警值
+                                        <div class="col-resize-handle" data-column="5"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors sort-header resizeable-column" data-sort="location" style="position: relative;">
+                                        货架库位
+                                        <span class="ml-1 text-gray-400 sort-icon">↕</span>
+                                        <div class="col-resize-handle" data-column="6"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resizeable-column" style="position: relative;">
+                                        库存状态
+                                        <div class="col-resize-handle" data-column="7"></div>
+                                    </th>
+                                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materialTableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 空数据提示 -->
+                <div id="emptyData" class="text-center py-12 hidden">
+                    <i class="fa fa-inbox text-gray-300 text-4xl mb-4"></i>
+                    <p class="text-gray-500">暂无数据</p>
+                    <button id="emptyResetBtn" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                        导入物料数据
+                    </button>
+                </div>
+                
+                <!-- 分页控件 -->
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-600">
+                            显示 <span id="startRange">1</span> 到 <span id="endRange">10</span> 条，共 <span id="totalDataCount">0</span> 条记录
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">每页显示:</span>
+                            <select id="itemsPerPageSelect" class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="10">10条</option>
+                                <option value="20">20条</option>
+                                <option value="50">50条</option>
+                                <option value="100">100条</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="prevPage" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa fa-chevron-left"></i> 上一页
+                        </button>
+                        <div class="flex items-center space-x-1">
+                            <span id="currentPage" class="px-3 py-2 text-sm font-medium text-blue-600">1</span>
+                            <span class="text-gray-400">/</span>
+                            <span id="totalPages" class="px-2 py-2 text-sm text-gray-500">1</span>
+                        </div>
+                        <button id="nextPage" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            下一页 <i class="fa fa-chevron-right"></i>
+                        </button>
+                        <div class="flex items-center space-x-1">
+                            <input id="pageJumpInput" type="number" min="1" placeholder="页码" class="w-16 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="pageJumpBtn" class="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                                跳转
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-4">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>© 2026 辅料管理系统 - 辅料管理看板</p>
+            <p class="mt-1">最后更新时间：<span id="lastUpdateTime">-</span></p>
+        </div>
+    </footer>
+
+    <!-- 新增/编辑物料弹窗 -->
+    <div id="materialModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="modalTitle">新增辅料</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <form id="materialForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 物料编码 -->
+                        <div>
+                            <label for="materialCode" class="block text-sm font-medium text-gray-700 mb-1">物料编码 <span class="text-red-500">*</span></label>
+                            <input type="text" id="materialCode" name="materialCode" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料编码" required>
+                        </div>
+                        
+                        <!-- 物料名称 -->
+                        <div>
+                            <label for="materialName" class="block text-sm font-medium text-gray-700 mb-1">物料名称 <span class="text-red-500">*</span></label>
+                            <input type="text" id="materialName" name="materialName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料名称" required>
+                        </div>
+                        
+                        <!-- 物料规格 -->
+                        <div>
+                            <label for="materialSpec" class="block text-sm font-medium text-gray-700 mb-1">物料规格 <span class="text-red-500">*</span></label>
+                            <input type="text" id="materialSpec" name="materialSpec" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入物料规格" required>
+                        </div>
+                        
+                        <!-- 单位 -->
+                        <div>
+                            <label for="materialUnit" class="block text-sm font-medium text-gray-700 mb-1">单位 <span class="text-red-500">*</span></label>
+                            <input type="text" id="materialUnit" name="materialUnit" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入单位" required>
+                        </div>
+                        
+                        <!-- 现有数量 -->
+                        <div>
+                            <label for="materialQuantity" class="block text-sm font-medium text-gray-700 mb-1">现有数量</label>
+                            <input type="number" id="materialQuantity" name="materialQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入现有数量" min="0" step="0.01">
+                        </div>
+                        
+                        <!-- 预警值 -->
+                        <div>
+                            <label for="warningValue" class="block text-sm font-medium text-gray-700 mb-1">预警值</label>
+                            <input type="number" id="warningValue" name="warningValue" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入预警值" min="0" step="0.01">
+                        </div>
+                        
+                        <!-- 库存峰值 -->
+                        <div>
+                            <label for="materialMaxQuantity" class="block text-sm font-medium text-gray-700 mb-1">库存峰值</label>
+                            <input type="number" id="materialMaxQuantity" name="materialMaxQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入库存峰值" min="0" step="0.01">
+                        </div>
+                        
+                        <!-- 货架库位 -->
+                        <div>
+                            <label for="materialLocation" class="block text-sm font-medium text-gray-700 mb-1">货架库位</label>
+                            <input type="text" id="materialLocation" name="materialLocation" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入货架库位">
+                        </div>
+                    </div>
+                    
+                    <!-- 备注 -->
+                    <div class="mt-4">
+                        <label for="materialRemark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                        <textarea id="materialRemark" name="materialRemark" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入备注信息"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="confirmBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    确认
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="loginModalTitle">请登录以修改数据</h3>
+                <div class="flex space-x-2">
+                    <button id="loginTab" class="px-3 py-1 rounded-md bg-blue-100 text-blue-700 font-medium">登录</button>
+                    <button id="closeLoginModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-4">
+                <!-- 登录表单 -->
+                <form id="loginForm">
+                    <div class="space-y-4">
+                        <!-- 用户名 -->
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="username" name="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
+                            <input type="password" id="password" name="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelLoginBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    登录
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户管理弹窗 -->
+    <div id="userManagementModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
+                <button id="closeUserManagementModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <!-- 新增用户按钮 -->
+                <button id="addUserBtn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300 flex items-center">
+                    <i class="fa fa-plus mr-2"></i>新增用户
+                </button>
+                
+                <!-- 用户列表 -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">姓名</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">角色</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">部门</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑用户弹窗 -->
+    <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800" id="userModalTitle">新增用户</h3>
+                <button id="closeUserModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <form id="userForm">
+                    <div class="space-y-4">
+                        <!-- 用户名 -->
+                        <div>
+                            <label for="userUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                            <input type="text" id="userUsername" name="userUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div>
+                            <label for="userPassword" class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
+                            <input type="password" id="userPassword" name="userPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
+                        </div>
+                        
+                        <!-- 角色 -->
+                        <div>
+                            <label for="userRole" class="block text-sm font-medium text-gray-700 mb-1">角色</label>
+                            <select id="userRole" name="userRole" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="user">普通用户</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                        </div>
+                        
+                        <!-- 部门 -->
+                        <div>
+                            <label for="userDepartment" class="block text-sm font-medium text-gray-700 mb-1">部门</label>
+                            <input type="text" id="userDepartment" name="userDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入部门">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelUserBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="confirmUserBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    确认
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出选项弹窗 -->
+    <div id="exportOptionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">导出Excel</h3>
+                <button id="closeExportModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <div class="space-y-4">
+                    <!-- 导出类型 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">选择导出内容</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="all" checked class="mr-2">
+                                <span>全部物料</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="warning" class="mr-2">
+                                <span>库存预警物料</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="exportType" value="shortage" class="mr-2">
+                                <span>库存不足物料</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="cancelExportBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-all duration-300">
+                    取消
+                </button>
+                <button id="confirmExportBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300">
+                    导出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 transform transition-all duration-300 opacity-0 translate-y-4">
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- JavaScript -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
